@@ -47,11 +47,12 @@ export class GameEngine {
   public getValidCards(playerId: number): number[] {
     const usedCards = playerId === 1 ? this.gameState.player1UsedCards : this.gameState.player2UsedCards;
     const forbiddenCards = playerId === 1 ? this.gameState.player1ForbiddenCards : this.gameState.player2ForbiddenCards;
-    
     const allCards = [1, 2, 3, 4, 5, 6, 7];
-    return allCards.filter(card => 
-      !usedCards.includes(card) && !forbiddenCards.includes(card)
-    );
+    if (this.gameState.currentRound === 7) {
+      // Son raundda yasaklı kart yok
+      return allCards.filter(card => !usedCards.includes(card));
+    }
+    return allCards.filter(card => !usedCards.includes(card) && !forbiddenCards.includes(card));
   }
 
   public isValidMove(playerId: number, cardNumber: number): boolean {
@@ -113,7 +114,7 @@ export class GameEngine {
 
   private updateForbiddenCards(playerId: number, lastPlayedCard: number): void {
     const forbiddenCards: number[] = [];
-    
+
     // Add card-1 and card+1 to forbidden list if they exist and aren't used
     if (lastPlayedCard > 1) {
       forbiddenCards.push(lastPlayedCard - 1);
@@ -135,7 +136,7 @@ export class GameEngine {
 
   private endGame(): void {
     this.gameState.status = 'finished';
-    
+
     if (this.gameState.player1Score > this.gameState.player2Score) {
       this.gameState.winner = 1;
     } else if (this.gameState.player2Score > this.gameState.player1Score) {
@@ -151,10 +152,10 @@ export class GameEngine {
 
   public canPlayCard(playerId: number, cardNumber: number): boolean {
     if (this.gameState.status !== 'playing') return false;
-    
+
     const usedCards = playerId === 1 ? this.gameState.player1UsedCards : this.gameState.player2UsedCards;
     const forbiddenCards = playerId === 1 ? this.gameState.player1ForbiddenCards : this.gameState.player2ForbiddenCards;
-    
+
     return !usedCards.includes(cardNumber) && !forbiddenCards.includes(cardNumber);
   }
 }

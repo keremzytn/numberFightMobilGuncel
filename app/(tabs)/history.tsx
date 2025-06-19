@@ -1,26 +1,92 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Trophy, TrendingUp, Target, Award } from 'lucide-react-native';
+import { useAuth } from '../../context/auth';
+import { io } from 'socket.io-client';
 
 export default function HistoryScreen() {
-  // Mock data - gerçek uygulamada AsyncStorage'dan gelecek
-  const stats = {
-    totalGames: 15,
-    wins: 9,
-    losses: 5,
-    draws: 1,
-    winRate: 60,
-    bestStreak: 4,
+  const { user } = useAuth();
+  const userId = user?.id;
+  const [stats, setStats] = useState({
+    totalGames: 0,
+    wins: 0,
+    losses: 0,
+    draws: 0,
+    winRate: 0,
+    bestStreak: 0,
+  });
+  const [recentGames, setRecentGames] = useState<any[]>([]);
+
+  const fetchGames = async () => {
+    try {
+      const res = await fetch(`http://172.16.6.36:3000/api/match/user/${userId}`);
+      const data = await res.json();
+      if (data.success) {
+        const games = data.matches;
+        updateStats(games);
+      }
+    } catch (error) {
+      console.error('Error fetching games:', error);
+    }
   };
 
-  const recentGames = [
-    { id: 1, opponent: 'Bot', result: 'win', score: '4-2', date: '2024-01-15' },
-    { id: 2, opponent: 'Oyuncu', result: 'loss', score: '2-5', date: '2024-01-14' },
-    { id: 3, opponent: 'Bot', result: 'win', score: '4-1', date: '2024-01-13' },
-    { id: 4, opponent: 'Oyuncu', result: 'draw', score: '3-3', date: '2024-01-12' },
-    { id: 5, opponent: 'Bot', result: 'win', score: '5-2', date: '2024-01-11' },
-  ];
+  const updateStats = (games: any[]) => {
+    setRecentGames(games.slice(-5).reverse().map((game: any, i: number) => ({
+      id: game._id || i,
+      opponent: game.player1Id === userId ? game.player2Id : game.player1Id,
+      result: game.winner === userId ? 'win' : (game.winner ? 'loss' : 'draw'),
+      score: `${game.player1Score}-${game.player2Score}`,
+      date: game.createdAt ? game.createdAt.substring(0, 10) : '',
+    })));
+
+    let wins = 0, losses = 0, draws = 0;
+    games.forEach((g: any) => {
+      if (g.winner === userId) wins++;
+      else if (!g.winner) draws++;
+      else losses++;
+    });
+
+    setStats({
+      totalGames: games.length,
+      wins,
+      losses,
+      draws,
+      winRate: games.length ? Math.round((wins / games.length) * 100) : 0,
+      bestStreak: 0,
+    });
+  };
+
+  useEffect(() => {
+    if (!userId) return;
+
+    fetchGames();
+
+    const socket = io('http://172.16.6.36:3000');
+
+    socket.on('connect', () => {
+      console.log('WebSocket connected');
+      socket.emit('join', { userId });
+    });
+
+    socket.on('matchUpdate', () => {
+      fetchGames();
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [userId]);
+
+  if (!user) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a' }}>
+        <Text style={{ color: '#f8fafc', fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
+          Maç geçmişini görüntülemek için giriş yapmalısın.
+        </Text>
+      </View>
+    );
+  }
 
   const getResultColor = (result: string) => {
     switch (result) {
@@ -57,13 +123,13 @@ export default function HistoryScreen() {
             <Text style={styles.statNumber}>{stats.wins}</Text>
             <Text style={styles.statLabel}>Kazanılan</Text>
           </View>
-          
+
           <View style={styles.statCard}>
             <Target size={24} color="#ef4444" />
             <Text style={styles.statNumber}>{stats.losses}</Text>
             <Text style={styles.statLabel}>Kaybedilen</Text>
           </View>
-          
+
           <View style={styles.statCard}>
             <TrendingUp size={24} color="#f59e0b" />
             <Text style={styles.statNumber}>%{stats.winRate}</Text>
@@ -88,7 +154,7 @@ export default function HistoryScreen() {
 
         <View style={styles.recentGamesSection}>
           <Text style={styles.sectionTitle}>Son Oyunlar</Text>
-          
+
           {recentGames.map((game) => (
             <View key={game.id} style={styles.gameItem}>
               <View style={styles.gameInfo}>

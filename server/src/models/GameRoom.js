@@ -1,4 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
+const Match = require('./Match');
 
 class GameRoom {
     constructor(player1Id, player2Id) {
@@ -24,6 +25,10 @@ class GameRoom {
         const usedCards = playerId === this.player1Id ? this.player1UsedCards : this.player2UsedCards;
         const forbiddenCards = playerId === this.player1Id ? this.player1ForbiddenCards : this.player2ForbiddenCards;
         const allCards = [1, 2, 3, 4, 5, 6, 7];
+        if (this.currentRound === 7) {
+            // Son raundda yasaklı kart yok
+            return allCards.filter(card => !usedCards.includes(card));
+        }
         return allCards.filter(card => !usedCards.includes(card) && !forbiddenCards.includes(card));
     }
 
@@ -137,6 +142,17 @@ class GameRoom {
         } else {
             this.winner = null;
         }
+
+        // Maç sonucunu veritabanına kaydet
+        Match.create({
+            player1Id: this.player1Id,
+            player2Id: this.player2Id,
+            player1Score: this.player1Score,
+            player2Score: this.player2Score,
+            winner: this.winner,
+            createdAt: new Date(),
+            totalRounds: 7
+        });
 
         return {
             winner: this.winner,

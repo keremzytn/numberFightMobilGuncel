@@ -2,8 +2,9 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Bot, Users, Play, LogIn, UserPlus } from 'lucide-react-native';
+import { Bot, Users, Play, LogIn, UserPlus, Gamepad2, Trophy } from 'lucide-react-native';
 import { useAuth } from '../../context/auth';
+import { Link } from 'expo-router';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -22,6 +23,48 @@ export default function HomeScreen() {
     });
   };
 
+  if (!user) {
+    return (
+      <LinearGradient colors={['#0f172a', '#1e293b', '#334155']} style={styles.container}>
+        <View style={styles.welcomeContainer}>
+          <Gamepad2 size={72} color="#f59e0b" style={styles.icon} />
+          <Text style={styles.title}>Hoş Geldiniz!</Text>
+          <Text style={styles.subtitle}>
+            Oyun oynamak ve arkadaşlarınızla rekabet etmek için hesap oluşturun veya giriş yapın.
+          </Text>
+
+          <View style={styles.featuresContainer}>
+            <View style={styles.featureItem}>
+              <Gamepad2 size={36} color="#10b981" />
+              <Text style={styles.featureText}>Çevrimiçi Oyun</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Trophy size={36} color="#f59e0b" />
+              <Text style={styles.featureText}>Sıralama Tablosu</Text>
+            </View>
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.loginButton]}
+              onPress={() => router.push('/login')}
+            >
+              <LogIn size={20} color="#ffffff" />
+              <Text style={styles.buttonText}>Giriş Yap</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.registerButton]}
+              onPress={() => router.push('/register')}
+            >
+              <UserPlus size={20} color="#ffffff" />
+              <Text style={styles.buttonText}>Kayıt Ol</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </LinearGradient>
+    );
+  }
+
   return (
     <LinearGradient
       colors={['#0f172a', '#1e293b', '#334155']}
@@ -37,8 +80,10 @@ export default function HomeScreen() {
           <LinearGradient
             colors={['#3b82f6', '#1d4ed8']}
             style={styles.buttonGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           >
-            <Bot size={32} color="#ffffff" />
+            <Bot size={36} color="#ffffff" />
             <Text style={styles.buttonText}>Bilgisayara Karşı</Text>
             <Text style={styles.buttonSubtext}>Yapay zeka ile oyna</Text>
           </LinearGradient>
@@ -48,31 +93,14 @@ export default function HomeScreen() {
           <LinearGradient
             colors={['#f59e0b', '#d97706']}
             style={styles.buttonGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           >
-            <Users size={32} color="#ffffff" />
+            <Users size={36} color="#ffffff" />
             <Text style={styles.buttonText}>Çevrimiçi Oyun</Text>
             <Text style={styles.buttonSubtext}>Gerçek oyuncularla eşleş</Text>
           </LinearGradient>
         </TouchableOpacity>
-
-        {!user && (
-          <View style={styles.authButtons}>
-            <TouchableOpacity
-              style={[styles.authButton, styles.loginButton]}
-              onPress={() => router.push('/login')}
-            >
-              <LogIn size={24} color="#ffffff" />
-              <Text style={styles.authButtonText}>Giriş Yap</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.authButton, styles.registerButton]}
-              onPress={() => router.push('/register')}
-            >
-              <UserPlus size={24} color="#ffffff" />
-              <Text style={styles.authButtonText}>Kayıt Ol</Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
 
       <View style={styles.footer}>
@@ -86,53 +114,83 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
   },
-  header: {
+  welcomeContainer: {
+    flex: 1,
     alignItems: 'center',
-    marginTop: 60,
-    marginBottom: 40,
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  icon: {
+    marginBottom: 24,
   },
   title: {
     fontSize: 36,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#f8fafc',
+    marginBottom: 12,
     textAlign: 'center',
-    marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
     color: '#cbd5e1',
     textAlign: 'center',
+    marginBottom: 48,
+    lineHeight: 24,
+    maxWidth: '80%',
   },
-  gameInfo: {
-    marginBottom: 40,
+  featuresContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 48,
   },
-  infoCard: {
+  featureItem: {
+    alignItems: 'center',
     backgroundColor: 'rgba(30, 41, 59, 0.8)',
-    borderRadius: 16,
-    padding: 20,
+    padding: 24,
+    borderRadius: 20,
+    width: '47%',
     borderWidth: 1,
     borderColor: '#334155',
   },
-  infoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  featureText: {
     color: '#f8fafc',
-    marginBottom: 12,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#cbd5e1',
-    marginBottom: 4,
+    marginTop: 12,
+    fontSize: 15,
+    fontWeight: '600',
   },
   buttonContainer: {
-    flex: 1,
+    width: '100%',
+    gap: 16,
+  },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 20,
+    padding: 18,
+    borderRadius: 16,
+    gap: 10,
+  },
+  loginButton: {
+    backgroundColor: '#2563eb',
+  },
+  registerButton: {
+    backgroundColor: '#059669',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  header: {
+    alignItems: 'center',
+    marginTop: 60,
+    marginBottom: 48,
   },
   gameButton: {
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: 'hidden',
     elevation: 8,
     shadowColor: '#000',
@@ -141,55 +199,28 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   buttonGradient: {
-    padding: 24,
+    padding: 28,
     alignItems: 'center',
-    gap: 8,
-  },
-  buttonText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    textAlign: 'center',
+    gap: 10,
   },
   buttonSubtext: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
-  },
-  authButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 20,
-  },
-  authButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  loginButton: {
-    backgroundColor: '#3b82f6',
-  },
-  registerButton: {
-    backgroundColor: '#10b981',
-  },
-  authButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff',
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 20,
+    marginTop: 32,
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    padding: 16,
+    borderRadius: 12,
   },
   footerText: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#94a3b8',
+    fontWeight: '500',
   },
 });

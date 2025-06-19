@@ -35,7 +35,7 @@ export class SocketManager {
   private serverUrl: string;
   private listeners: Map<string, Function[]> = new Map();
 
-  constructor(serverUrl: string = 'http://192.168.230.70:3001') {
+  constructor(serverUrl: string = 'http://localhost:3000') {
     this.serverUrl = serverUrl;
   }
 

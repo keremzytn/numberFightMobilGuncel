@@ -1,7 +1,22 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import { Chrome as Home, Gamepad2, Trophy, Settings, User } from 'lucide-react-native';
+import { useAuth } from '../../context/auth';
+import { Alert } from 'react-native';
+import { useEffect } from 'react';
 
 export default function TabLayout() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) {
+      Alert.alert(
+        "Giriş Gerekli",
+        "Oyun oynamak, geçmişi görüntülemek ve profil ayarları için giriş yapmanız gerekiyor.",
+        [{ text: "Tamam", style: "default" }]
+      );
+    }
+  }, [user]);
+
   return (
     <Tabs
       screenOptions={{
@@ -31,6 +46,7 @@ export default function TabLayout() {
             <Gamepad2 size={size} color={color} />
           ),
         }}
+        redirect={!user}
       />
       <Tabs.Screen
         name="history"
@@ -40,6 +56,7 @@ export default function TabLayout() {
             <Trophy size={size} color={color} />
           ),
         }}
+        redirect={!user}
       />
       <Tabs.Screen
         name="settings"
@@ -58,6 +75,7 @@ export default function TabLayout() {
             <User size={size} color={color} />
           ),
         }}
+        redirect={!user}
       />
     </Tabs>
   );
