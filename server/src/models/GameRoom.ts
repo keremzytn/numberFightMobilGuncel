@@ -1,8 +1,38 @@
-const { v4: uuidv4 } = require('uuid');
-const Match = require('./Match');
+import { v4 as uuidv4 } from 'uuid';
+import { Match } from './Match';
+import { IGameState, IRoundResult, IGameResult, GameStatus } from '../types/gameRoom';
 
-class GameRoom {
-    constructor(player1Id, player2Id) {
+export class GameRoom {
+    private id: string;
+    private player1Id: string;
+    private player2Id: string;
+    private currentRound: number;
+    private player1Score: number;
+    private player2Score: number;
+    private player1UsedCards: number[];
+    private player2UsedCards: number[];
+    private player1ForbiddenCards: number[];
+    private player2ForbiddenCards: number[];
+    private player1Card: number | null;
+    private player2Card: number | null;
+    private roundTimer: NodeJS.Timeout | null;
+    private status: GameStatus;
+    private winner: string | null;
+    private roundStartTime: number | null;
+
+    get gameId(): string {
+        return this.id;
+    }
+
+    get firstPlayerId(): string {
+        return this.player1Id;
+    }
+
+    get secondPlayerId(): string {
+        return this.player2Id;
+    }
+
+    constructor(player1Id: string, player2Id: string) {
         this.id = uuidv4();
         this.player1Id = player1Id;
         this.player2Id = player2Id;
@@ -21,18 +51,17 @@ class GameRoom {
         this.roundStartTime = null;
     }
 
-    getValidCards(playerId) {
+    getValidCards(playerId: string): number[] {
         const usedCards = playerId === this.player1Id ? this.player1UsedCards : this.player2UsedCards;
         const forbiddenCards = playerId === this.player1Id ? this.player1ForbiddenCards : this.player2ForbiddenCards;
         const allCards = [1, 2, 3, 4, 5, 6, 7];
         if (this.currentRound === 7) {
-            // Son raundda yasaklı kart yok
             return allCards.filter(card => !usedCards.includes(card));
         }
         return allCards.filter(card => !usedCards.includes(card) && !forbiddenCards.includes(card));
     }
 
-    playCard(playerId, cardNumber) {
+    playCard(playerId: string, cardNumber: number): void {
         if (this.status !== 'playing') {
             throw new Error('Game is not in playing state');
         }
@@ -53,28 +82,30 @@ class GameRoom {
         }
     }
 
-    resolveRound() {
+    resolveRound(): IRoundResult {
         if (this.roundTimer) {
             clearTimeout(this.roundTimer);
             this.roundTimer = null;
         }
 
-        let roundWinner = null;
-        if (this.player1Card > this.player2Card) {
-            roundWinner = this.player1Id;
-            this.player1Score++;
-        } else if (this.player2Card > this.player1Card) {
-            roundWinner = this.player2Id;
-            this.player2Score++;
+        let roundWinner: string | null = null;
+        if (this.player1Card !== null && this.player2Card !== null) {
+            if (this.player1Card > this.player2Card) {
+                roundWinner = this.player1Id;
+                this.player1Score++;
+            } else if (this.player2Card > this.player1Card) {
+                roundWinner = this.player2Id;
+                this.player2Score++;
+            }
+
+            this.player1UsedCards.push(this.player1Card);
+            this.player2UsedCards.push(this.player2Card);
+
+            this.updateForbiddenCards(this.player1Id, this.player1Card);
+            this.updateForbiddenCards(this.player2Id, this.player2Card);
         }
 
-        this.player1UsedCards.push(this.player1Card);
-        this.player2UsedCards.push(this.player2Card);
-
-        this.updateForbiddenCards(this.player1Id, this.player1Card);
-        this.updateForbiddenCards(this.player2Id, this.player2Card);
-
-        const roundResult = {
+        const roundResult: IRoundResult = {
             round: this.currentRound,
             player1Card: this.player1Card,
             player2Card: this.player2Card,
@@ -86,8 +117,8 @@ class GameRoom {
         return roundResult;
     }
 
-    updateForbiddenCards(playerId, lastPlayedCard) {
-        const forbiddenCards = [];
+    private updateForbiddenCards(playerId: string, lastPlayedCard: number): void {
+        const forbiddenCards: number[] = [];
         if (lastPlayedCard > 1) {
             forbiddenCards.push(lastPlayedCard - 1);
         }
@@ -105,13 +136,13 @@ class GameRoom {
         }
     }
 
-    startRound() {
+    startRound(): IGameState {
         this.status = 'playing';
         this.roundStartTime = Date.now();
         return this.getGameState();
     }
 
-    handleTimeOut() {
+    handleTimeOut(): IRoundResult | null {
         if (this.player1Card === null) {
             const validCards = this.getValidCards(this.player1Id);
             if (validCards.length > 0) {
@@ -132,7 +163,7 @@ class GameRoom {
         return null;
     }
 
-    endGame() {
+    async endGame(): Promise<IGameResult> {
         this.status = 'finished';
 
         if (this.player1Score > this.player2Score) {
@@ -143,15 +174,14 @@ class GameRoom {
             this.winner = null;
         }
 
-        // Maç sonucunu veritabanına kaydet
-        Match.create({
+        await Match.create({
             player1Id: this.player1Id,
             player2Id: this.player2Id,
-            player1Score: this.player1Score,
-            player2Score: this.player2Score,
-            winner: this.winner,
-            createdAt: new Date(),
-            totalRounds: 7
+            score: {
+                player1: this.player1Score,
+                player2: this.player2Score
+            },
+            winner: this.winner || undefined
         });
 
         return {
@@ -162,7 +192,7 @@ class GameRoom {
         };
     }
 
-    getGameState() {
+    getGameState(): IGameState {
         return {
             gameId: this.id,
             currentRound: this.currentRound,
@@ -172,6 +202,4 @@ class GameRoom {
             roundStartTime: this.roundStartTime
         };
     }
-}
-
-module.exports = GameRoom; 
+} 

@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { LogIn, Eye, EyeOff, AlertTriangle, CheckCircle2 } from 'lucide-react-native';
 import { useAuth } from '../context/auth';
+import { API_URL } from '../src/config/env';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
@@ -14,15 +15,19 @@ export default function LoginScreen() {
     const { login } = useAuth();
 
     const validateForm = () => {
+        console.log('Form değerleri:', { email, password });
         if (!email || !password) {
+            console.log('Email veya şifre boş');
             setError('Lütfen e-posta ve şifre alanlarını doldurun.');
             return false;
         }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
+            console.log('Email formatı geçersiz');
             setError('Geçerli bir e-posta adresi giriniz. Örnek: ornek@mail.com');
             return false;
         }
+        console.log('Form doğrulama başarılı');
         setError('');
         return true;
     };
@@ -30,7 +35,8 @@ export default function LoginScreen() {
     const handleLogin = async () => {
         if (!validateForm()) return;
         try {
-            const response = await fetch('http://172.16.6.36:3000/api/auth/login', {
+            console.log('Login isteği gönderiliyor:', `${API_URL}/api/auth/login`);
+            const response = await fetch(`${API_URL}/api/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -38,8 +44,14 @@ export default function LoginScreen() {
                 body: JSON.stringify({ email, password }),
             });
 
-            if (response.ok) {
-                const data = await response.json();
+            if (!response.ok) {
+                throw new Error('Giriş başarısız');
+            }
+
+            const data = await response.json();
+            console.log('Login başarılı, data:', data);
+
+            if (data.user) {
                 await login(data.user.email, password, data.user.username, data.user.id || data.user._id);
                 setSuccess('Giriş başarılı! Yönlendiriliyorsunuz...');
                 setError('');
@@ -48,10 +60,10 @@ export default function LoginScreen() {
                     router.push('/');
                 }, 1500);
             } else {
-                setError('Giriş başarısız oldu. Lütfen bilgilerinizi kontrol edin veya tekrar deneyin.');
-                setSuccess('');
+                throw new Error('Kullanıcı bilgileri alınamadı');
             }
         } catch (error) {
+            console.error('Login hatası:', error);
             setError('Bir hata oluştu. Lütfen internet bağlantınızı kontrol edin veya daha sonra tekrar deneyin.');
             setSuccess('');
         }

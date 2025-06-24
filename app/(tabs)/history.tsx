@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Trophy, TrendingUp, Target, Award } from 'lucide-react-native';
 import { useAuth } from '../../context/auth';
 import { io } from 'socket.io-client';
+import { API_URL } from '../../src/config/env';
 
 export default function HistoryScreen() {
   const { user } = useAuth();
@@ -20,7 +21,7 @@ export default function HistoryScreen() {
 
   const fetchGames = async () => {
     try {
-      const res = await fetch(`http://172.16.6.36:3000/api/match/user/${userId}`);
+      const res = await fetch(`${API_URL}/api/match/user/${userId}`);
       const data = await res.json();
       if (data.success) {
         const games = data.matches;
@@ -62,7 +63,7 @@ export default function HistoryScreen() {
 
     fetchGames();
 
-    const socket = io('http://172.16.6.36:3000');
+    const socket = io(API_URL);
 
     socket.on('connect', () => {
       console.log('WebSocket connected');

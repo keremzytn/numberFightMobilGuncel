@@ -1,47 +1,63 @@
-const GameRoom = require('../models/GameRoom');
+import { Server } from 'socket.io';
+import { GameRoom } from '../models/GameRoom';
+import {
+    IMatchFoundData,
+    IPlayCardData,
+    IGameStats,
+    IRoundStartData,
+    IPlayerSocket
+} from '../types/socket';
+import { IGameState, IRoundResult } from '../types/gameRoom';
 
-class GameSocket {
-    constructor(io) {
+export class GameSocket {
+    private io: Server;
+    private games: Map<string, GameRoom>;
+    private waitingPlayers: string[];
+    private playerSockets: Map<string, IPlayerSocket>;
+
+    constructor(io: Server) {
         this.io = io;
         this.games = new Map();
         this.waitingPlayers = [];
         this.playerSockets = new Map();
     }
 
-    initialize() {
-        this.io.on('connection', (socket) => {
+    initialize(): void {
+        this.io.on('connection', (socket: IPlayerSocket) => {
             console.log('Player connected:', socket.id);
 
             socket.on('findMatch', () => this.handleFindMatch(socket));
-            socket.on('playCard', (data) => this.handlePlayCard(socket, data));
-            socket.on('leaveGame', (data) => this.handleLeaveGame(socket, data));
+            socket.on('playCard', (data: IPlayCardData) => this.handlePlayCard(socket, data));
+            socket.on('leaveGame', (data: { gameId: string }) => this.handleLeaveGame(socket, data));
             socket.on('disconnect', () => this.handleDisconnect(socket));
         });
     }
 
-    handleFindMatch(socket) {
+    private handleFindMatch(socket: IPlayerSocket): void {
         console.log('Player looking for match:', socket.id);
         this.playerSockets.set(socket.id, socket);
 
         if (this.waitingPlayers.length > 0) {
-            const opponent = this.waitingPlayers.shift();
+            const opponent = this.waitingPlayers.shift()!;
             const game = new GameRoom(opponent, socket.id);
-            this.games.set(game.id, game);
+            this.games.set(game.gameId, game);
 
             const opponentSocket = this.playerSockets.get(opponent);
             if (opponentSocket) {
-                opponentSocket.emit('matchFound', {
-                    gameId: game.id,
+                const matchData: IMatchFoundData = {
+                    gameId: game.gameId,
                     opponentId: socket.id,
                     isPlayer1: true
-                });
+                };
+                opponentSocket.emit('matchFound', matchData);
             }
 
-            socket.emit('matchFound', {
-                gameId: game.id,
+            const matchData: IMatchFoundData = {
+                gameId: game.gameId,
                 opponentId: opponent,
                 isPlayer1: false
-            });
+            };
+            socket.emit('matchFound', matchData);
 
             setTimeout(() => {
                 const gameState = game.startRound();
@@ -53,7 +69,7 @@ class GameSocket {
         }
     }
 
-    handlePlayCard(socket, { gameId, cardNumber }) {
+    private handlePlayCard(socket: IPlayerSocket, { gameId, cardNumber }: IPlayCardData): void {
         console.log('Player played card:', socket.id, cardNumber);
         const game = this.games.get(gameId);
         if (!game) {
@@ -65,7 +81,7 @@ class GameSocket {
             game.playCard(socket.id, cardNumber);
             socket.emit('cardPlayed', { cardNumber });
 
-            const opponentId = game.player1Id === socket.id ? game.player2Id : game.player1Id;
+            const opponentId = game.firstPlayerId === socket.id ? game.secondPlayerId : game.firstPlayerId;
             const opponentSocket = this.playerSockets.get(opponentId);
             if (opponentSocket) {
                 opponentSocket.emit('opponentPlayed');
@@ -76,14 +92,14 @@ class GameSocket {
                 this.emitRoundResult(game, roundResult);
             }
         } catch (error) {
-            socket.emit('error', { message: error.message });
+            socket.emit('error', { message: error instanceof Error ? error.message : 'Unknown error' });
         }
     }
 
-    handleLeaveGame(socket, { gameId }) {
+    private handleLeaveGame(socket: IPlayerSocket, { gameId }: { gameId: string }): void {
         const game = this.games.get(gameId);
         if (game) {
-            const opponentId = game.player1Id === socket.id ? game.player2Id : game.player1Id;
+            const opponentId = game.firstPlayerId === socket.id ? game.secondPlayerId : game.firstPlayerId;
             const opponentSocket = this.playerSockets.get(opponentId);
             if (opponentSocket) {
                 opponentSocket.emit('opponentLeft');
@@ -92,7 +108,7 @@ class GameSocket {
         }
     }
 
-    handleDisconnect(socket) {
+    private handleDisconnect(socket: IPlayerSocket): void {
         console.log('Player disconnected:', socket.id);
         const waitingIndex = this.waitingPlayers.indexOf(socket.id);
         if (waitingIndex > -1) {
@@ -100,8 +116,8 @@ class GameSocket {
         }
 
         for (const [gameId, game] of this.games.entries()) {
-            if (game.player1Id === socket.id || game.player2Id === socket.id) {
-                const opponentId = game.player1Id === socket.id ? game.player2Id : game.player1Id;
+            if (game.firstPlayerId === socket.id || game.secondPlayerId === socket.id) {
+                const opponentId = game.firstPlayerId === socket.id ? game.secondPlayerId : game.firstPlayerId;
                 const opponentSocket = this.playerSockets.get(opponentId);
                 if (opponentSocket) {
                     opponentSocket.emit('opponentDisconnected');
@@ -113,35 +129,37 @@ class GameSocket {
         this.playerSockets.delete(socket.id);
     }
 
-    emitRoundStart(game, gameState) {
-        const player1Socket = this.playerSockets.get(game.player1Id);
-        const player2Socket = this.playerSockets.get(game.player2Id);
+    private emitRoundStart(game: GameRoom, gameState: IGameState): void {
+        const player1Socket = this.playerSockets.get(game.firstPlayerId);
+        const player2Socket = this.playerSockets.get(game.secondPlayerId);
 
         if (player1Socket) {
-            player1Socket.emit('roundStart', {
+            const player1Data: IRoundStartData = {
                 ...gameState,
-                validCards: game.getValidCards(game.player1Id),
-                forbiddenCards: game.player1ForbiddenCards
-            });
+                validCards: game.getValidCards(game.firstPlayerId),
+                forbiddenCards: []  // Bu değer GameRoom'dan alınmalı
+            };
+            player1Socket.emit('roundStart', player1Data);
         }
 
         if (player2Socket) {
-            player2Socket.emit('roundStart', {
+            const player2Data: IRoundStartData = {
                 ...gameState,
-                validCards: game.getValidCards(game.player2Id),
-                forbiddenCards: game.player2ForbiddenCards
-            });
+                validCards: game.getValidCards(game.secondPlayerId),
+                forbiddenCards: []  // Bu değer GameRoom'dan alınmalı
+            };
+            player2Socket.emit('roundStart', player2Data);
         }
     }
 
-    emitRoundResult(game, roundResult) {
-        const player1Socket = this.playerSockets.get(game.player1Id);
-        const player2Socket = this.playerSockets.get(game.player2Id);
+    private emitRoundResult(game: GameRoom, roundResult: IRoundResult): void {
+        const player1Socket = this.playerSockets.get(game.firstPlayerId);
+        const player2Socket = this.playerSockets.get(game.secondPlayerId);
 
         if (player1Socket) {
             player1Socket.emit('roundResult', {
                 ...roundResult,
-                isWinner: roundResult.winner === game.player1Id,
+                isWinner: roundResult.winner === game.firstPlayerId,
                 opponentCard: roundResult.player2Card
             });
         }
@@ -149,19 +167,17 @@ class GameSocket {
         if (player2Socket) {
             player2Socket.emit('roundResult', {
                 ...roundResult,
-                isWinner: roundResult.winner === game.player2Id,
+                isWinner: roundResult.winner === game.secondPlayerId,
                 opponentCard: roundResult.player1Card
             });
         }
     }
 
-    getGameStats() {
+    getGameStats(): IGameStats {
         return {
             activeGames: this.games.size,
             waitingPlayers: this.waitingPlayers.length,
             connectedPlayers: this.playerSockets.size
         };
     }
-}
-
-module.exports = GameSocket; 
+} 

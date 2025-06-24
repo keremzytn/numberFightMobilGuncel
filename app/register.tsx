@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'reac
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { UserPlus, Eye, EyeOff, AlertTriangle, CheckCircle2 } from 'lucide-react-native';
+import { API_URL } from '../src/config/env';
 
 export default function RegisterScreen() {
     const [username, setUsername] = useState('');
@@ -35,7 +36,7 @@ export default function RegisterScreen() {
         if (!validateForm()) return;
         try {
             console.log('Fetch başlatılıyor');
-            const response = await fetch('http://172.16.6.36:3000/api/auth/register', {
+            const response = await fetch(`${API_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
