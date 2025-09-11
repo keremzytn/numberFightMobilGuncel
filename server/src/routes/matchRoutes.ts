@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { MatchController } from '../controllers/matchController';
 
 const router = Router();
-const matchController = new MatchController(process.env.MONGODB_URI || '');
+const matchController = new MatchController('mongodb://127.0.0.1:27017/cardgame');
 
 router.post('/', matchController.createMatch);
 router.get('/', matchController.getAllMatches);

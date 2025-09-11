@@ -48,7 +48,7 @@ export default function GameHeader({
             </View>
           )}
         </View>
-        
+
         <View style={styles.timerContainer}>
           <Clock size={16} color={getTimerColor()} />
           <Text style={[styles.timerText, { color: getTimerColor() }]}>
@@ -65,9 +65,9 @@ export default function GameHeader({
             <Text style={styles.scoreText}>{player1Score}</Text>
           </View>
         </View>
-        
+
         <Text style={styles.scoreSeparator}>-</Text>
-        
+
         <View style={styles.scoreItem}>
           <Text style={styles.playerLabel}>{opponentType}</Text>
           <View style={styles.scoreCircle}>

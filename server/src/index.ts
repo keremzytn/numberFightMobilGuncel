@@ -1,6 +1,5 @@
 import express from 'express';
-import http from 'http';
-import { Server } from 'socket.io';
+import { connectDB } from './config/database';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
@@ -8,20 +7,12 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/authRoutes';
 import matchRoutes from './routes/matchRoutes';
-import { GameSocket } from './socket/gameSocket';
+import { initializeSocket } from './socket/gameSocket';
 
 dotenv.config();
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"],
-        credentials: true
-    },
-    transports: ['websocket', 'polling']
-});
+const port = Number(process.env.PORT) || 3000;
 
 // Middleware
 app.use(helmet());
@@ -43,20 +34,17 @@ app.use(limiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/match', matchRoutes);
 
-// Initialize game socket
-const gameSocket = new GameSocket(io);
-gameSocket.initialize();
+const startServer = async () => {
+    try {
+        await connectDB();
+        const server = app.listen(port, '0.0.0.0', () => {
+            console.log(`Server running on port ${port}`);
+        });
+        initializeSocket(server);
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    }
+};
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-    res.json({
-        status: 'OK',
-        ...gameSocket.getGameStats()
-    });
-});
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server ${PORT} portunda çalışıyor`);
-    console.log(`Health check available at http://localhost:${PORT}/health`);
-}); 
+startServer(); 

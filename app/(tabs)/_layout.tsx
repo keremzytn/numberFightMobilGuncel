@@ -46,7 +46,6 @@ export default function TabLayout() {
             <Gamepad2 size={size} color={color} />
           ),
         }}
-        redirect={!user}
       />
       <Tabs.Screen
         name="history"

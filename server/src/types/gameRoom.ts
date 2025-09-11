@@ -5,6 +5,9 @@ export interface IGameState {
     player2Score: number;
     status: GameStatus;
     roundStartTime: number | null;
+    opponentId: string;
+    validCards: number[];
+    forbiddenCards: number[];
 }
 
 export interface IRoundResult {
@@ -23,4 +26,19 @@ export interface IGameResult {
     totalRounds: number;
 }
 
-export type GameStatus = 'waiting' | 'playing' | 'finished'; 
+export type GameStatus = 'waiting' | 'playing' | 'finished';
+
+export interface IGameRoom {
+    id: string;
+    players: string[];
+    currentRound: number;
+    playerStates: {
+        [playerId: string]: {
+            gold: number;
+            cards: string[];
+            score: number;
+        }
+    };
+    status: 'waiting' | 'playing' | 'finished';
+    createdAt: Date;
+} 

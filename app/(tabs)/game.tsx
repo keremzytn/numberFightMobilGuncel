@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Animated, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Clock, User, Bot, Trophy, ArrowLeft, Wifi, WifiOff } from 'lucide-react-native';
@@ -11,37 +11,71 @@ import GameHeader from '@/components/GameHeader';
 import RoundResult from '@/components/RoundResult';
 import { useAuth } from '../../context/auth';
 
+interface ErrorType {
+  type: 'connection' | 'game';
+  message: string;
+  details?: any;
+}
+
+interface DisconnectReason {
+  reason: string;
+}
+
+interface ReconnectAttempt {
+  attempt: number;
+}
+
 export default function GameScreen() {
-  const { mode } = useLocalSearchParams<{ mode: string }>();
+  // Router ve Auth hooks
+  const params = useLocalSearchParams<{ mode: string }>();
+  const { user } = useAuth();
+  const requestedMode = (params?.mode || 'bot') as 'bot' | 'online';
+  // Çevrimiçi mod için giriş kontrolü
+  const mode = (!user && requestedMode === 'online') ? 'bot' : requestedMode;
+
+  // Giriş yapmamış kullanıcı çevrimiçi modu seçtiyse uyarı göster
+  useEffect(() => {
+    if (!user && requestedMode === 'online') {
+      Alert.alert(
+        'Giriş Gerekli',
+        'Çevrimiçi oynamak için giriş yapmanız gerekiyor.',
+        [
+          { text: 'Giriş Yap', onPress: () => router.push('/login') },
+          { text: 'Bot ile Oyna', style: 'default' }
+        ]
+      );
+    }
+  }, [user, requestedMode]);
+
+  // Game engine states
   const [gameEngine] = useState(() => new GameEngine());
   const [botPlayer] = useState(() => new BotPlayer());
-  const { user } = useAuth();
-
-  // Local game state (for bot mode)
   const [localGameState, setLocalGameState] = useState(gameEngine.getGameState());
 
-  // Online game state
+  // Online game states
   const [onlineGameState, setOnlineGameState] = useState<GameState | null>(null);
   const [gameId, setGameId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [matchStatus, setMatchStatus] = useState<'idle' | 'searching' | 'found' | 'playing'>('idle');
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [reconnecting, setReconnecting] = useState(false);
 
-  // Common game state
+  // UI states
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState(30);
   const [showResult, setShowResult] = useState(false);
   const [lastRoundResult, setLastRoundResult] = useState<any>(null);
   const [opponentPlayed, setOpponentPlayed] = useState(false);
+  const [loadingProgress] = useState(new Animated.Value(0));
 
-  // Get current game state based on mode
+  // Current game state
   const currentGameState = mode === 'online' ? onlineGameState : localGameState;
 
-  // Initialize online game
+  // Effects
   useEffect(() => {
     if (mode === 'online') {
       initializeOnlineGame();
     }
-
     return () => {
       if (mode === 'online') {
         cleanup();
@@ -49,25 +83,202 @@ export default function GameScreen() {
     };
   }, [mode]);
 
+  useEffect(() => {
+    if (currentGameState?.status === 'playing' && timeLeft > 0 && matchStatus === 'playing') {
+      const timer = setTimeout(() => {
+        setTimeLeft(timeLeft - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (timeLeft === 0 && currentGameState?.status === 'playing') {
+      handleAutoCardSelection();
+    }
+  }, [timeLeft, currentGameState?.status, matchStatus]);
+
+  useEffect(() => {
+    if (currentGameState?.status === 'playing') {
+      setTimeLeft(30);
+      setSelectedCard(null);
+      setShowResult(false);
+    }
+  }, [currentGameState?.currentRound]);
+
+  useEffect(() => {
+    let isSubscribed = true;
+
+    const animate = () => {
+      if (!isSubscribed) return;
+
+      Animated.sequence([
+        Animated.timing(loadingProgress, {
+          toValue: 100,
+          duration: 2000,
+          useNativeDriver: false
+        }),
+        Animated.timing(loadingProgress, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: false
+        })
+      ]).start(() => {
+        if (isSubscribed) {
+          animate();
+        }
+      });
+    };
+
+    if (!currentGameState) {
+      animate();
+    }
+
+    return () => {
+      isSubscribed = false;
+      loadingProgress.setValue(0);
+    };
+  }, [currentGameState]);
+
+  // Callbacks
+  const handleAutoCardSelection = useCallback(() => {
+    if (mode === 'online' && onlineGameState) {
+      const validCards = onlineGameState.validCards;
+      if (validCards.length > 0) {
+        const lowestCard = Math.min(...validCards);
+        playCard(lowestCard);
+      }
+    } else {
+      const validCards = gameEngine.getValidCards(1);
+      if (validCards.length > 0) {
+        const lowestCard = Math.min(...validCards);
+        playCard(lowestCard);
+      }
+    }
+  }, [mode, onlineGameState, gameEngine]);
+
+  const goBack = useCallback(() => {
+    if (mode === 'online' && gameId) {
+      socketManager.leaveGame(gameId);
+    }
+    router.push('/');
+  }, [mode, gameId]);
+
+  const cleanup = () => {
+    if (mode === 'online') {
+      socketManager.off('connected');
+      socketManager.off('disconnected');
+      socketManager.off('reconnecting');
+      socketManager.off('error');
+      socketManager.off('waitingForMatch');
+      socketManager.off('matchFound');
+      socketManager.off('roundStart');
+      socketManager.off('opponentPlayed');
+      socketManager.off('roundResult');
+      socketManager.off('gameEnd');
+      socketManager.off('opponentLeft');
+      socketManager.off('opponentDisconnected');
+      socketManager.disconnect();
+    }
+    setOnlineGameState(null);
+    setGameId(null);
+    setMatchStatus('idle');
+    setIsConnected(false);
+    setConnectionError(null);
+    setReconnecting(false);
+  };
+
   const initializeOnlineGame = async () => {
     try {
+      cleanup(); // Önceki bağlantıyı temizle
       await socketManager.connect();
       setIsConnected(true);
+      setConnectionError(null);
 
       // Set up event listeners
+      socketManager.on('connected', () => {
+        console.log('Socket bağlantısı başarılı');
+        setIsConnected(true);
+        setConnectionError(null);
+        setReconnecting(false);
+      });
+
+      // Bağlantı durumunu kontrol eden yardımcı fonksiyon
+      const checkConnection = () => {
+        const connected = socketManager.isConnected();
+        console.log('Bağlantı durumu kontrol:', { connected });
+        setIsConnected(connected);
+        return connected;
+      };
+
+      socketManager.on('disconnected', ({ reason }: DisconnectReason) => {
+        console.log('Socket bağlantısı kesildi, sebep:', reason);
+        setIsConnected(false);
+        if (reason === 'transport close' || reason === 'ping timeout') {
+          setConnectionError('Bağlantı kesildi. Yeniden bağlanılıyor...');
+        }
+      });
+
+      socketManager.on('reconnecting', ({ attempt }: ReconnectAttempt) => {
+        console.log('Yeniden bağlanma denemesi:', attempt);
+        setReconnecting(true);
+        setConnectionError(`Yeniden bağlanılıyor... (Deneme ${attempt}/5)`);
+      });
+
       socketManager.on('waitingForMatch', () => {
+        console.log('Eşleşme bekleniyor...');
         setMatchStatus('searching');
       });
 
       socketManager.on('matchFound', (data: { gameId: string }) => {
+        console.log('Eşleşme bulundu, detaylar:', {
+          gameId: data.gameId,
+          currentStatus: matchStatus,
+          isConnected: checkConnection()
+        });
+
+        if (!checkConnection()) {
+          console.error('Eşleşme bulundu ama bağlantı yok!');
+          socketManager.reconnect();
+          return;
+        }
+
         setMatchStatus('found');
         setGameId(data.gameId);
+
+        // Kısa bir gecikme ile playerReady gönder
         setTimeout(() => {
-          setMatchStatus('playing');
-        }, 2000);
+          if (checkConnection()) {
+            console.log('playerReady gönderiliyor...');
+            socketManager.sendPlayerReady(data.gameId);
+          } else {
+            console.error('playerReady gönderilemedi - bağlantı yok!');
+          }
+        }, 500);
       });
 
       socketManager.on('roundStart', (gameState: GameState) => {
+        console.log('Yeni round başladı, detaylar:', {
+          gameId: gameState.gameId,
+          currentGameId: gameId,
+          matchStatus: matchStatus,
+          gameState: gameState
+        });
+
+        if (!gameState?.gameId) {
+          console.error('Geçersiz oyun durumu:', gameState);
+          Alert.alert('Hata', 'Geçersiz oyun durumu');
+          return;
+        }
+
+        if (!checkConnection()) {
+          console.error('Round başlatılamıyor - bağlantı yok!');
+          return;
+        }
+
+        if (gameState.gameId !== gameId) {
+          console.error('Oyun ID uyuşmazlığı:', { beklenen: gameId, gelen: gameState.gameId });
+          return;
+        }
+
+        // Tüm kontroller geçtiyse oyunu başlat
+        setMatchStatus('playing');
         setOnlineGameState(gameState);
         setTimeLeft(30);
         setSelectedCard(null);
@@ -83,7 +294,7 @@ export default function GameScreen() {
         setLastRoundResult({
           round: result.round,
           player1Card: result.opponentCard,
-          player2Card: result.player1Card, // Swap for display
+          player2Card: result.player1Card,
           winner: result.isWinner ? 2 : (result.winner ? 1 : null),
           player1Score: result.player1Score,
           player2Score: result.player2Score,
@@ -91,12 +302,16 @@ export default function GameScreen() {
         setShowResult(true);
 
         setTimeout(() => {
-          setOnlineGameState(prev => prev ? {
-            ...prev,
-            player1Score: result.player1Score,
-            player2Score: result.player2Score,
-            currentRound: prev.currentRound + 1
-          } : null);
+          setOnlineGameState(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              player1Score: result.player1Score,
+              player2Score: result.player2Score,
+              currentRound: result.round + 1,
+              status: 'playing'
+            };
+          });
         }, 2000);
       });
 
@@ -104,86 +319,61 @@ export default function GameScreen() {
         showOnlineGameEndDialog(result);
       });
 
+      socketManager.on('error', (error: ErrorType) => {
+        console.error('Oyun hatası detayları:', {
+          error,
+          currentStatus: matchStatus,
+          gameId: gameId,
+          isConnected: checkConnection()
+        });
+        if (error.type === 'connection') {
+          setConnectionError(error.message);
+          setIsConnected(false);
+        } else if (error.type === 'game') {
+          Alert.alert('Oyun Hatası', error.message, [
+            {
+              text: 'Ana Menü', onPress: () => {
+                cleanup();
+                router.push('/');
+              }
+            }
+          ]);
+        }
+      });
+
       socketManager.on('opponentLeft', () => {
+        console.log('Rakip oyunu terk etti');
         Alert.alert('Oyun Bitti', 'Rakibiniz oyunu terk etti.', [
-          { text: 'Ana Menü', onPress: () => router.push('/') }
+          {
+            text: 'Ana Menü', onPress: () => {
+              cleanup();
+              router.push('/');
+            }
+          }
         ]);
       });
 
       socketManager.on('opponentDisconnected', () => {
+        console.log('Rakibin bağlantısı kesildi');
         Alert.alert('Bağlantı Sorunu', 'Rakibinizin bağlantısı kesildi.', [
-          { text: 'Ana Menü', onPress: () => router.push('/') }
+          {
+            text: 'Ana Menü', onPress: () => {
+              cleanup();
+              router.push('/');
+            }
+          }
         ]);
       });
 
-      socketManager.on('connect', () => {
-        console.log('Socket bağlantısı başarılı');
-      });
-
-      socketManager.on('error', (error: Error) => {
-        // ... existing code ...
-      });
-
       // Start matchmaking
+      console.log('Eşleşme aranıyor...');
       socketManager.findMatch();
 
     } catch (error) {
-      console.error('Failed to connect to server:', error);
-      setIsConnected(false);
-      Alert.alert(
-        'Bağlantı Hatası',
-        'Sunucuya bağlanılamadı. Bot modunda oynamak ister misiniz?',
-        [
-          { text: 'Ana Menü', onPress: () => router.push('/') },
-          { text: 'Bot Modu', onPress: () => router.setParams({ mode: 'bot' }) }
-        ]
-      );
+      console.error('Sunucuya bağlanma hatası:', error);
+      setConnectionError('Sunucuya bağlanılamadı');
     }
   };
-
-  const cleanup = () => {
-    if (gameId) {
-      socketManager.leaveGame(gameId);
-    }
-    socketManager.disconnect();
-  };
-
-  // Timer effect
-  useEffect(() => {
-    if (currentGameState?.status === 'playing' && timeLeft > 0 && matchStatus === 'playing') {
-      const timer = setTimeout(() => {
-        setTimeLeft(timeLeft - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && currentGameState?.status === 'playing') {
-      handleAutoCardSelection();
-    }
-  }, [timeLeft, currentGameState?.status, matchStatus]);
-
-  // Reset timer on new round
-  useEffect(() => {
-    if (currentGameState?.status === 'playing') {
-      setTimeLeft(30);
-      setSelectedCard(null);
-      setShowResult(false);
-    }
-  }, [currentGameState?.currentRound]);
-
-  const handleAutoCardSelection = useCallback(() => {
-    if (mode === 'online' && onlineGameState) {
-      const validCards = onlineGameState.validCards;
-      if (validCards.length > 0) {
-        const lowestCard = Math.min(...validCards);
-        playCard(lowestCard);
-      }
-    } else {
-      const validCards = gameEngine.getValidCards(1);
-      if (validCards.length > 0) {
-        const lowestCard = Math.min(...validCards);
-        playCard(lowestCard);
-      }
-    }
-  }, [mode, onlineGameState]);
 
   const playCard = (cardNumber: number) => {
     if (selectedCard !== null) return;
@@ -221,7 +411,7 @@ export default function GameScreen() {
       message = 'Berabere! İyi oyun! 🤝';
     }
 
-    // Maç sonucunu backend'e kaydet
+    // Maç sonucunu backend'e kaydet (sadece giriş yapmış kullanıcılar için)
     if (user) {
       fetch('http://localhost:3000/api/match', {
         method: 'POST',
@@ -236,16 +426,25 @@ export default function GameScreen() {
           mode: 'bot',
         })
       });
+      Alert.alert(
+        'Oyun Bitti',
+        message,
+        [
+          { text: 'Ana Menü', onPress: () => router.push('/') },
+          { text: 'Tekrar Oyna', onPress: resetGame }
+        ]
+      );
+    } else {
+      Alert.alert(
+        'Oyun Bitti',
+        message + '\n\nMaç sonuçlarını kaydetmek ve çevrimiçi oynamak için giriş yapın!',
+        [
+          { text: 'Giriş Yap', onPress: () => router.push('/login') },
+          { text: 'Ana Menü', onPress: () => router.push('/') },
+          { text: 'Tekrar Oyna', onPress: resetGame }
+        ]
+      );
     }
-
-    Alert.alert(
-      'Oyun Bitti',
-      message,
-      [
-        { text: 'Ana Menü', onPress: () => router.push('/') },
-        { text: 'Tekrar Oyna', onPress: resetGame }
-      ]
-    );
   };
 
   const showOnlineGameEndDialog = (result: GameEndResult) => {
@@ -298,13 +497,6 @@ export default function GameScreen() {
     setShowResult(false);
   };
 
-  const goBack = () => {
-    if (mode === 'online' && gameId) {
-      socketManager.leaveGame(gameId);
-    }
-    router.push('/');
-  };
-
   // Show loading/matching screen for online mode
   if (mode === 'online' && matchStatus !== 'playing') {
     return (
@@ -351,7 +543,32 @@ export default function GameScreen() {
         style={styles.container}
       >
         <View style={styles.loadingContainer}>
+          <TouchableOpacity onPress={goBack} style={styles.backButton}>
+            <ArrowLeft size={24} color="#f8fafc" />
+            <Text style={styles.backText}>Geri</Text>
+          </TouchableOpacity>
           <Text style={styles.statusTitle}>Oyun Yükleniyor...</Text>
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <Animated.View style={[
+                styles.progressFill,
+                {
+                  width: loadingProgress.interpolate({
+                    inputRange: [0, 100],
+                    outputRange: ['0%', '100%']
+                  })
+                }
+              ]}>
+                <LinearGradient
+                  colors={['#f59e0b', '#d97706']}
+                  style={styles.progressGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                />
+              </Animated.View>
+            </View>
+            <Text style={styles.progressText}>Oyun hazırlanıyor...</Text>
+          </View>
         </View>
       </LinearGradient>
     );
@@ -371,15 +588,31 @@ export default function GameScreen() {
       style={styles.container}
     >
       <GameHeader
-        currentRound={currentGameState.currentRound}
-        player1Score={currentGameState.player1Score}
-        player2Score={currentGameState.player2Score}
+        currentRound={currentGameState?.currentRound || 1}
+        player1Score={currentGameState?.player1Score || 0}
+        player2Score={currentGameState?.player2Score || 0}
         timeLeft={timeLeft}
         onBack={goBack}
-        opponentType={mode === 'bot' ? 'Bot' : 'Oyuncu'}
+        opponentType={mode === 'bot' ? 'Bot' : 'Rakip'}
         isOnline={mode === 'online'}
         isConnected={isConnected}
       />
+
+      {mode === 'online' && (
+        <View style={styles.connectionStatus}>
+          {isConnected ? (
+            <Wifi size={20} color="green" />
+          ) : (
+            <WifiOff size={20} color="red" />
+          )}
+          {connectionError && (
+            <Text style={styles.errorText}>{connectionError}</Text>
+          )}
+          {reconnecting && (
+            <ActivityIndicator size="small" color="#0000ff" />
+          )}
+        </View>
+      )}
 
       {showResult && lastRoundResult && (
         <RoundResult
@@ -607,10 +840,43 @@ const styles = StyleSheet.create({
   connectionStatus: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    padding: 5,
+    gap: 8,
   },
   connectionText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  progressContainer: {
+    width: '80%',
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  progressBar: {
+    width: '100%',
+    height: 8,
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressGradient: {
+    width: '100%',
+    height: '100%',
+  },
+  progressText: {
+    fontSize: 14,
+    color: '#94a3b8',
+    textAlign: 'center',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
   },
 });

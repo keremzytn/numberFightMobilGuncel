@@ -19,6 +19,7 @@ export class GameRoom {
     private status: GameStatus;
     private winner: string | null;
     private roundStartTime: number | null;
+    private readyPlayers: Set<string>;
 
     get gameId(): string {
         return this.id;
@@ -30,6 +31,14 @@ export class GameRoom {
 
     get secondPlayerId(): string {
         return this.player2Id;
+    }
+
+    getStatus(): GameStatus {
+        return this.status;
+    }
+
+    setStatus(status: GameStatus): void {
+        this.status = status;
     }
 
     constructor(player1Id: string, player2Id: string) {
@@ -49,6 +58,15 @@ export class GameRoom {
         this.status = 'waiting';
         this.winner = null;
         this.roundStartTime = null;
+        this.readyPlayers = new Set<string>();
+    }
+
+    getReadyPlayers(): Set<string> {
+        return this.readyPlayers;
+    }
+
+    setReadyPlayers(players: Set<string>): void {
+        this.readyPlayers = players;
     }
 
     getValidCards(playerId: string): number[] {
@@ -59,6 +77,10 @@ export class GameRoom {
             return allCards.filter(card => !usedCards.includes(card));
         }
         return allCards.filter(card => !usedCards.includes(card) && !forbiddenCards.includes(card));
+    }
+
+    getForbiddenCards(playerId: string): number[] {
+        return playerId === this.player1Id ? this.player1ForbiddenCards : this.player2ForbiddenCards;
     }
 
     playCard(playerId: string, cardNumber: number): void {
@@ -103,10 +125,15 @@ export class GameRoom {
 
             this.updateForbiddenCards(this.player1Id, this.player1Card);
             this.updateForbiddenCards(this.player2Id, this.player2Card);
+
+            // Reset cards and increment round
+            this.player1Card = null;
+            this.player2Card = null;
+            this.currentRound++;
         }
 
         const roundResult: IRoundResult = {
-            round: this.currentRound,
+            round: this.currentRound - 1,
             player1Card: this.player1Card,
             player2Card: this.player2Card,
             winner: roundWinner,
@@ -199,7 +226,10 @@ export class GameRoom {
             player1Score: this.player1Score,
             player2Score: this.player2Score,
             status: this.status,
-            roundStartTime: this.roundStartTime
+            roundStartTime: this.roundStartTime,
+            validCards: [],
+            forbiddenCards: [],
+            opponentId: ''
         };
     }
 } 

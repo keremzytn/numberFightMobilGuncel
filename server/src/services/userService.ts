@@ -28,6 +28,7 @@ export class UserService {
             const user: IUser = {
                 ...userData,
                 password: hashedPassword,
+                gold: 100,
                 createdAt: new Date()
             };
 
