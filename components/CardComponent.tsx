@@ -10,12 +10,12 @@ interface CardComponentProps {
   onPress: () => void;
 }
 
-export default function CardComponent({ 
-  number, 
-  isValid, 
-  isUsed, 
-  isSelected, 
-  onPress 
+export default function CardComponent({
+  number,
+  isValid,
+  isUsed,
+  isSelected,
+  onPress
 }: CardComponentProps) {
   const getCardColors = () => {
     if (isUsed) {
@@ -47,7 +47,7 @@ export default function CardComponent({
       ]}
     >
       <LinearGradient
-        colors={getCardColors()}
+        colors={getCardColors() as [string, string]}
         style={styles.cardGradient}
       >
         <Text style={[styles.cardNumber, { color: getTextColor() }]}>

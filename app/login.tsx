@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { LogIn, Eye, EyeOff, AlertTriangle, CheckCircle2 } from 'lucide-react-native';
 import { useAuth } from '../context/auth';
-import { API_URL } from '../src/config/env';
+import { authService } from '../src/services/authService';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
@@ -35,36 +35,27 @@ export default function LoginScreen() {
     const handleLogin = async () => {
         if (!validateForm()) return;
         try {
-            console.log('Login isteği gönderiliyor:', `${API_URL}/api/auth/login`);
-            const response = await fetch(`${API_URL}/api/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            });
+            const response = await authService.login({ email, password });
+            console.log('Login başarılı, data:', response);
 
-            if (!response.ok) {
-                throw new Error('Giriş başarısız');
-            }
-
-            const data = await response.json();
-            console.log('Login başarılı, data:', data);
-
-            if (data.user) {
-                await login(data.user.email, password, data.user.username, data.user.id || data.user._id);
-                setSuccess('Giriş başarılı! Yönlendiriliyorsunuz...');
-                setError('');
-                setTimeout(() => {
-                    setSuccess('');
-                    router.push('/');
-                }, 1500);
-            } else {
-                throw new Error('Kullanıcı bilgileri alınamadı');
-            }
-        } catch (error) {
+            await login(response.user.email, password, response.user.username, response.user.id);
+            setSuccess('Giriş başarılı! Yönlendiriliyorsunuz...');
+            setError('');
+            setTimeout(() => {
+                setSuccess('');
+                router.push('/');
+            }, 1500);
+        } catch (error: any) {
             console.error('Login hatası:', error);
-            setError('Bir hata oluştu. Lütfen internet bağlantınızı kontrol edin veya daha sonra tekrar deneyin.');
+            if (error.name === 'AuthError') {
+                setError(error.message);
+            } else if (error.response?.status === 401) {
+                setError('E-posta veya şifre hatalı');
+            } else if (error.response?.status >= 500) {
+                setError('Sunucu hatası. Lütfen daha sonra tekrar deneyin.');
+            } else {
+                setError('Bir hata oluştu. Lütfen internet bağlantınızı kontrol edin veya daha sonra tekrar deneyin.');
+            }
             setSuccess('');
         }
     };

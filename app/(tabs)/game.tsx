@@ -6,6 +6,7 @@ import { Clock, User, Bot, Trophy, ArrowLeft, Wifi, WifiOff } from 'lucide-react
 import { GameEngine } from '@/utils/GameEngine';
 import { BotPlayer } from '@/utils/BotPlayer';
 import { socketManager, GameState, RoundResult as RoundResultType, GameEndResult } from '@/utils/SocketManager';
+import { API_URL } from '@/src/config/env';
 import CardComponent from '@/components/CardComponent';
 import GameHeader from '@/components/GameHeader';
 import RoundResult from '@/components/RoundResult';
@@ -413,7 +414,7 @@ export default function GameScreen() {
 
     // Maç sonucunu backend'e kaydet (sadece giriş yapmış kullanıcılar için)
     if (user) {
-      fetch('http://localhost:3000/api/match', {
+      fetch(`${API_URL}/api/Matches`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -459,7 +460,7 @@ export default function GameScreen() {
 
     // Maç sonucunu backend'e kaydet
     if (user && onlineGameState) {
-      fetch('http://localhost:3000/api/match', {
+      fetch(`${API_URL}/api/matches`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

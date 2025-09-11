@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Trophy, TrendingUp, Target, Award } from 'lucide-react-native';
 import { useAuth } from '../../context/auth';
-import { io } from 'socket.io-client';
+import { socketService } from '../../src/services/socketService';
 import { API_URL } from '../../src/config/env';
 
 export default function HistoryScreen() {
@@ -21,7 +21,7 @@ export default function HistoryScreen() {
 
   const fetchGames = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/match/user/${userId}`);
+      const res = await fetch(`${API_URL}/api/Matches/user/${userId}`);
       const data = await res.json();
       if (data.success) {
         const games = data.matches;
@@ -63,19 +63,23 @@ export default function HistoryScreen() {
 
     fetchGames();
 
-    const socket = io(API_URL);
+    const connectSocket = async () => {
+      try {
+        await socketService.connect();
+        console.log('SignalR connected');
 
-    socket.on('connect', () => {
-      console.log('WebSocket connected');
-      socket.emit('join', { userId });
-    });
+        socketService.on('MatchUpdated', () => {
+          fetchGames();
+        });
+      } catch (error) {
+        console.error('SignalR connection error:', error);
+      }
+    };
 
-    socket.on('matchUpdate', () => {
-      fetchGames();
-    });
+    connectSocket();
 
     return () => {
-      socket.disconnect();
+      socketService.disconnect();
     };
   }, [userId]);
 

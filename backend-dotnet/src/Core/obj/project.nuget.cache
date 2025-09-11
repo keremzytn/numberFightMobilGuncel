@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "dgSpecHash": "VG67XyoI3cg=",
+  "success": true,
+  "projectFilePath": "/Users/kerem/Projects/project 2/backend-dotnet/src/Core/Core.csproj",
+  "expectedPackageFiles": [
+    "/Users/kerem/.nuget/packages/microsoft.entityframeworkcore/9.0.9/microsoft.entityframeworkcore.9.0.9.nupkg.sha512",
+    "/Users/kerem/.nuget/packages/microsoft.entityframeworkcore.abstractions/9.0.9/microsoft.entityframeworkcore.abstractions.9.0.9.nupkg.sha512",
+    "/Users/kerem/.nuget/packages/microsoft.entityframeworkcore.analyzers/9.0.9/microsoft.entityframeworkcore.analyzers.9.0.9.nupkg.sha512",
+    "/Users/kerem/.nuget/packages/microsoft.extensions.caching.abstractions/9.0.9/microsoft.extensions.caching.abstractions.9.0.9.nupkg.sha512",
+    "/Users/kerem/.nuget/packages/microsoft.extensions.caching.memory/9.0.9/microsoft.extensions.caching.memory.9.0.9.nupkg.sha512",
+    "/Users/kerem/.nuget/packages/microsoft.extensions.dependencyinjection/9.0.9/microsoft.extensions.dependencyinjection.9.0.9.nupkg.sha512",
+    "/Users/kerem/.nuget/packages/microsoft.extensions.dependencyinjection.abstractions/9.0.9/microsoft.extensions.dependencyinjection.abstractions.9.0.9.nupkg.sha512",
+    "/Users/kerem/.nuget/packages/microsoft.extensions.logging/9.0.9/microsoft.extensions.logging.9.0.9.nupkg.sha512",
+    "/Users/kerem/.nuget/packages/microsoft.extensions.logging.abstractions/9.0.9/microsoft.extensions.logging.abstractions.9.0.9.nupkg.sha512",
+    "/Users/kerem/.nuget/packages/microsoft.extensions.options/9.0.9/microsoft.extensions.options.9.0.9.nupkg.sha512",
+    "/Users/kerem/.nuget/packages/microsoft.extensions.primitives/9.0.9/microsoft.extensions.primitives.9.0.9.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -3,12 +3,14 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'reac
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { UserPlus, Eye, EyeOff, AlertTriangle, CheckCircle2 } from 'lucide-react-native';
-import { API_URL } from '../src/config/env';
+import { authService } from '../src/services/authService';
+import { useAuth } from '../context/auth';
 
 export default function RegisterScreen() {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const { login } = useAuth();
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -32,33 +34,31 @@ export default function RegisterScreen() {
     };
 
     const handleRegister = async () => {
-        console.log('Kayıt butonuna tıklandı');
         if (!validateForm()) return;
         try {
-            console.log('Fetch başlatılıyor');
-            const response = await fetch(`${API_URL}/api/auth/register`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username, email, password }),
-            });
-            console.log('Fetch cevabı:', response);
+            const response = await authService.register({ username, email, password });
+            console.log('Kayıt başarılı, data:', response);
 
-            if (response.ok) {
-                setSuccess('Kayıt başarılı! Yönlendiriliyorsunuz...');
-                setError('');
-                setTimeout(() => {
-                    setSuccess('');
-                    router.push('/');
-                }, 1500);
-            } else {
-                setError('Kayıt başarısız oldu. Lütfen bilgilerinizi kontrol edin veya daha sonra tekrar deneyin.');
+            // Otomatik login yap
+            await login(response.user.email, password, response.user.username, response.user.id);
+
+            setSuccess('Kayıt başarılı! Yönlendiriliyorsunuz...');
+            setError('');
+            setTimeout(() => {
                 setSuccess('');
+                router.push('/');
+            }, 1500);
+        } catch (error: any) {
+            console.error('Kayıt hatası:', error);
+            if (error.name === 'AuthError') {
+                setError(error.message);
+            } else if (error.response?.status === 400) {
+                setError('Bu e-posta adresi zaten kullanılıyor.');
+            } else if (error.response?.status >= 500) {
+                setError('Sunucu hatası. Lütfen daha sonra tekrar deneyin.');
+            } else {
+                setError('Bir hata oluştu. Lütfen internet bağlantınızı kontrol edin veya daha sonra tekrar deneyin.');
             }
-        } catch (error) {
-            console.log('Fetch catch hatası:', error);
-            setError('Bir hata oluştu. Lütfen internet bağlantınızı kontrol edin veya daha sonra tekrar deneyin.');
             setSuccess('');
         }
     };
