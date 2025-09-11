@@ -3,6 +3,7 @@ using MediatR;
 using Core.Interfaces;
 using Core.Services;
 using Core.Entities;
+using System.Security.Claims;
 
 namespace API.SignalR;
 
@@ -11,27 +12,45 @@ public class GameHub : Hub
     private readonly IMediator _mediator;
     private readonly IGameRepository _gameRepository;
     private readonly IMatchRepository _matchRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly IFriendRepository _friendRepository;
     private static readonly Dictionary<string, string> _userConnections = new();
     private static readonly List<string> _waitingPlayers = new();
+    private static readonly Dictionary<string, List<string>> _friendInvitations = new();
     private static readonly BotPlayer _botPlayer = new();
 
     public GameHub(
         IMediator mediator, 
         IGameRepository gameRepository,
-        IMatchRepository matchRepository)
+        IMatchRepository matchRepository,
+        IUserRepository userRepository,
+        IFriendRepository friendRepository)
     {
         _mediator = mediator;
         _gameRepository = gameRepository;
         _matchRepository = matchRepository;
+        _userRepository = userRepository;
+        _friendRepository = friendRepository;
     }
 
     public override async Task OnConnectedAsync()
     {
-        var userId = Context.GetHttpContext()?.Request.Query["userId"].ToString();
+        var userId = GetCurrentUserId();
         if (!string.IsNullOrEmpty(userId))
         {
             _userConnections[userId] = Context.ConnectionId;
             await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId}");
+            
+            // Update user online status
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user != null)
+            {
+                user.SetOnlineStatus(true);
+                await _userRepository.UpdateAsync(user);
+                
+                // Notify friends that user is online
+                await NotifyFriendsOnlineStatus(userId, true);
+            }
         }
         await base.OnConnectedAsync();
     }
@@ -44,6 +63,17 @@ public class GameHub : Hub
             _userConnections.Remove(userId);
             _waitingPlayers.Remove(userId);
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"user_{userId}");
+            
+            // Update user offline status
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user != null)
+            {
+                user.SetOnlineStatus(false);
+                await _userRepository.UpdateAsync(user);
+                
+                // Notify friends that user is offline
+                await NotifyFriendsOnlineStatus(userId, false);
+            }
         }
         await base.OnDisconnectedAsync(exception);
     }
@@ -211,5 +241,161 @@ public class GameHub : Hub
         };
 
         await Clients.Group($"game_{game.Id}").SendAsync("gameEnded", result);
+    }
+
+    private string GetCurrentUserId()
+    {
+        return Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+            ?? Context.GetHttpContext()?.Request.Query["userId"].ToString() 
+            ?? throw new UnauthorizedAccessException("Kullanıcı kimliği bulunamadı");
+    }
+
+    private async Task NotifyFriendsOnlineStatus(string userId, bool isOnline)
+    {
+        var friends = await _friendRepository.GetUserFriendsAsync(userId, FriendshipStatus.Accepted);
+        
+        foreach (var friend in friends)
+        {
+            var friendUserId = friend.UserId == userId ? friend.FriendUserId : friend.UserId;
+            var friendConnection = _userConnections.GetValueOrDefault(friendUserId);
+            
+            if (!string.IsNullOrEmpty(friendConnection))
+            {
+                await Clients.Client(friendConnection).SendAsync("friendOnlineStatusChanged", new { 
+                    friendId = userId, 
+                    isOnline = isOnline 
+                });
+            }
+        }
+    }
+
+    public async Task InviteFriend(string friendUserId)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            
+            // Check if they are friends
+            var areFriends = await _friendRepository.AreFriendsAsync(userId, friendUserId);
+            if (!areFriends)
+            {
+                await Clients.Caller.SendAsync("error", "Bu kullanıcı arkadaşınız değil");
+                return;
+            }
+
+            // Check if friend is online
+            var friendConnection = _userConnections.GetValueOrDefault(friendUserId);
+            if (string.IsNullOrEmpty(friendConnection))
+            {
+                await Clients.Caller.SendAsync("error", "Arkadaşınız şu anda çevrimdışı");
+                return;
+            }
+
+            // Create game invitation
+            var game = Game.Create(userId, friendUserId);
+            await _gameRepository.AddAsync(game);
+
+            // Store invitation
+            if (!_friendInvitations.ContainsKey(friendUserId))
+                _friendInvitations[friendUserId] = new List<string>();
+            _friendInvitations[friendUserId].Add(game.Id);
+
+            // Send invitation to friend
+            await Clients.Client(friendConnection).SendAsync("friendGameInvitation", new { 
+                gameId = game.Id, 
+                fromUserId = userId,
+                fromUsername = (await _userRepository.GetByIdAsync(userId))?.Username
+            });
+
+            await Clients.Caller.SendAsync("invitationSent", new { friendUserId });
+        }
+        catch (Exception ex)
+        {
+            await Clients.Caller.SendAsync("error", ex.Message);
+        }
+    }
+
+    public async Task RespondToInvitation(string gameId, bool accept)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var game = await _gameRepository.GetByIdAsync(gameId);
+            
+            if (game == null)
+            {
+                await Clients.Caller.SendAsync("error", "Oyun bulunamadı");
+                return;
+            }
+
+            if (game.Player2Id != userId)
+            {
+                await Clients.Caller.SendAsync("error", "Bu davet size ait değil");
+                return;
+            }
+
+            // Remove invitation from pending list
+            if (_friendInvitations.ContainsKey(userId))
+            {
+                _friendInvitations[userId].Remove(gameId);
+                if (_friendInvitations[userId].Count == 0)
+                    _friendInvitations.Remove(userId);
+            }
+
+            var player1Connection = _userConnections.GetValueOrDefault(game.Player1Id);
+
+            if (accept)
+            {
+                // Start the game
+                var player2Connection = _userConnections.GetValueOrDefault(game.Player2Id);
+
+                if (!string.IsNullOrEmpty(player1Connection) && !string.IsNullOrEmpty(player2Connection))
+                {
+                    await Groups.AddToGroupAsync(player1Connection, $"game_{game.Id}");
+                    await Groups.AddToGroupAsync(player2Connection, $"game_{game.Id}");
+
+                    await Clients.Client(player1Connection).SendAsync("invitationAccepted", new { gameId = game.Id, isPlayer1 = true, opponentId = game.Player2Id });
+                    await Clients.Client(player2Connection).SendAsync("invitationAccepted", new { gameId = game.Id, isPlayer1 = false, opponentId = game.Player1Id });
+
+                    // Start the game after 2 seconds
+                    await Task.Delay(2000);
+                    game.StartGame();
+                    await _gameRepository.UpdateAsync(game);
+
+                    await SendGameState(game);
+                }
+            }
+            else
+            {
+                // Decline invitation
+                if (!string.IsNullOrEmpty(player1Connection))
+                {
+                    await Clients.Client(player1Connection).SendAsync("invitationDeclined", new { friendUserId = userId });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await Clients.Caller.SendAsync("error", ex.Message);
+        }
+    }
+
+    public async Task GetOnlineFriends()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var onlineFriends = await _friendRepository.GetOnlineFriendsAsync(userId);
+            
+            await Clients.Caller.SendAsync("onlineFriends", onlineFriends.Select(f => new {
+                id = f.Id,
+                username = f.Username,
+                isOnline = f.IsOnline
+            }));
+        }
+        catch (Exception ex)
+        {
+            await Clients.Caller.SendAsync("error", ex.Message);
+        }
     }
 }

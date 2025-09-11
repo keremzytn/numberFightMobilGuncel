@@ -12,5 +12,7 @@ public class MappingProfile : Profile
         CreateMap<Game, GameDto>();
         CreateMap<GameMove, GameMoveDto>();
         CreateMap<Match, MatchDto>();
+        CreateMap<Friend, FriendDto>()
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
     }
 }
