@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<Game> Games { get; set; }
     public DbSet<Match> Matches { get; set; }
+    public DbSet<Friend> Friends { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -57,6 +58,26 @@ public class AppDbContext : DbContext
         {
             entity.Property(e => e.Mode)
                 .HasConversion<string>();
+        });
+
+        modelBuilder.Entity<Friend>(entity =>
+        {
+            entity.Property(e => e.Status)
+                .HasConversion<string>();
+
+            // Configure relationships
+            entity.HasOne(f => f.User)
+                .WithMany(u => u.SentFriendRequests)
+                .HasForeignKey(f => f.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(f => f.FriendUser)
+                .WithMany(u => u.ReceivedFriendRequests)
+                .HasForeignKey(f => f.FriendUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Prevent duplicate friend requests
+            entity.HasIndex(f => new { f.UserId, f.FriendUserId }).IsUnique();
         });
     }
 }

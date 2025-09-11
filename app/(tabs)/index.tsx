@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { Bot, Users, Play, LogIn, UserPlus, Gamepad2, Trophy } from 'lucide-react-native';
 import { useAuth } from '../../context/auth';
 import { Link } from 'expo-router';
+import FriendNotifications from '../../components/FriendNotifications';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -20,6 +21,13 @@ export default function HomeScreen() {
     router.push({
       pathname: '/game',
       params: { mode: 'online' }
+    });
+  };
+
+  const handleGameInvitation = (gameId: string) => {
+    router.push({
+      pathname: '/game',
+      params: { mode: 'friend', gameId }
     });
   };
 
@@ -107,6 +115,8 @@ export default function HomeScreen() {
         <Play size={20} color="#94a3b8" />
         <Text style={styles.footerText}>Oyuna başlamak için bir mod seç</Text>
       </View>
+
+      <FriendNotifications onGameInvitation={handleGameInvitation} />
     </LinearGradient>
   );
 }

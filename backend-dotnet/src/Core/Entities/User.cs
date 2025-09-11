@@ -15,6 +15,14 @@ public class User : BaseEntity
     public string PasswordHash { get; private set; }
 
     public int Gold { get; private set; }
+    
+    public bool IsOnline { get; private set; }
+    
+    public DateTime? LastSeenAt { get; private set; }
+
+    // Navigation properties for friendships
+    public virtual ICollection<Friend> SentFriendRequests { get; private set; } = new List<Friend>();
+    public virtual ICollection<Friend> ReceivedFriendRequests { get; private set; } = new List<Friend>();
 
     private User() { } // EF Core için
 
@@ -40,5 +48,14 @@ public class User : BaseEntity
         if (amount < 0) throw new InvalidOperationException("Gold miktarı negatif olamaz");
         if (Gold < amount) throw new InvalidOperationException("Yetersiz gold miktarı");
         Gold -= amount;
+    }
+
+    public void SetOnlineStatus(bool isOnline)
+    {
+        IsOnline = isOnline;
+        if (!isOnline)
+        {
+            LastSeenAt = DateTime.UtcNow;
+        }
     }
 }

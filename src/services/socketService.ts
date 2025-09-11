@@ -45,8 +45,10 @@ class SocketService {
             const token = await authService.getToken();
             if (!token) throw new Error('Token bulunamadı');
 
+            const userId = await this.getUserId();
+            
             this.connection = new HubConnectionBuilder()
-                .withUrl(`${SIGNALR_URL}?access_token=${token}`, {
+                .withUrl(`${SIGNALR_URL}?userId=${userId}&access_token=${token}`, {
                     skipNegotiation: true,
                     transport: Platform.OS === 'web' ? undefined : 1 // WebSockets only for mobile
                 })
@@ -93,6 +95,21 @@ class SocketService {
 
         const userId = await this.getUserId();
         await this.connection.invoke('PlayCard', gameId, userId, cardNumber);
+    }
+
+    async inviteFriend(friendUserId: string): Promise<void> {
+        if (!this.connection) throw new Error('Bağlantı yok');
+        await this.connection.invoke('InviteFriend', friendUserId);
+    }
+
+    async respondToInvitation(gameId: string, accept: boolean): Promise<void> {
+        if (!this.connection) throw new Error('Bağlantı yok');
+        await this.connection.invoke('RespondToInvitation', gameId, accept);
+    }
+
+    async getOnlineFriends(): Promise<void> {
+        if (!this.connection) throw new Error('Bağlantı yok');
+        await this.connection.invoke('GetOnlineFriends');
     }
 
     private async getUserId(): Promise<string> {
