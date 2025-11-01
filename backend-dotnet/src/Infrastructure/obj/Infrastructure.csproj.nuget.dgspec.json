@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/kerem/Projects/project 2/backend-dotnet/src/Infrastructure/Infrastructure.csproj": {}
+    "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Infrastructure/Infrastructure.csproj": {}
   },
   "projects": {
-    "/Users/kerem/Projects/project 2/backend-dotnet/src/Application/Application.csproj": {
+    "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/Application.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/kerem/Projects/project 2/backend-dotnet/src/Application/Application.csproj",
+        "projectUniqueName": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/Application.csproj",
         "projectName": "Application",
-        "projectPath": "/Users/kerem/Projects/project 2/backend-dotnet/src/Application/Application.csproj",
+        "projectPath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/Application.csproj",
         "packagesPath": "/Users/kerem/.nuget/packages/",
-        "outputPath": "/Users/kerem/Projects/project 2/backend-dotnet/src/Application/obj/",
+        "outputPath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/kerem/.nuget/NuGet/NuGet.Config"
@@ -27,8 +27,8 @@
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "/Users/kerem/Projects/project 2/backend-dotnet/src/Core/Core.csproj": {
-                "projectPath": "/Users/kerem/Projects/project 2/backend-dotnet/src/Core/Core.csproj"
+              "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Core/Core.csproj": {
+                "projectPath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Core/Core.csproj"
               }
             }
           }
@@ -86,14 +86,14 @@
         }
       }
     },
-    "/Users/kerem/Projects/project 2/backend-dotnet/src/Core/Core.csproj": {
+    "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Core/Core.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/kerem/Projects/project 2/backend-dotnet/src/Core/Core.csproj",
+        "projectUniqueName": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Core/Core.csproj",
         "projectName": "Core",
-        "projectPath": "/Users/kerem/Projects/project 2/backend-dotnet/src/Core/Core.csproj",
+        "projectPath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Core/Core.csproj",
         "packagesPath": "/Users/kerem/.nuget/packages/",
-        "outputPath": "/Users/kerem/Projects/project 2/backend-dotnet/src/Core/obj/",
+        "outputPath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Core/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/kerem/.nuget/NuGet/NuGet.Config"
@@ -152,14 +152,14 @@
         }
       }
     },
-    "/Users/kerem/Projects/project 2/backend-dotnet/src/Infrastructure/Infrastructure.csproj": {
+    "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Infrastructure/Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/kerem/Projects/project 2/backend-dotnet/src/Infrastructure/Infrastructure.csproj",
+        "projectUniqueName": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Infrastructure/Infrastructure.csproj",
         "projectName": "Infrastructure",
-        "projectPath": "/Users/kerem/Projects/project 2/backend-dotnet/src/Infrastructure/Infrastructure.csproj",
+        "projectPath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Infrastructure/Infrastructure.csproj",
         "packagesPath": "/Users/kerem/.nuget/packages/",
-        "outputPath": "/Users/kerem/Projects/project 2/backend-dotnet/src/Infrastructure/obj/",
+        "outputPath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Infrastructure/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/kerem/.nuget/NuGet/NuGet.Config"
@@ -175,11 +175,11 @@
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "/Users/kerem/Projects/project 2/backend-dotnet/src/Application/Application.csproj": {
-                "projectPath": "/Users/kerem/Projects/project 2/backend-dotnet/src/Application/Application.csproj"
+              "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/Application.csproj": {
+                "projectPath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/Application.csproj"
               },
-              "/Users/kerem/Projects/project 2/backend-dotnet/src/Core/Core.csproj": {
-                "projectPath": "/Users/kerem/Projects/project 2/backend-dotnet/src/Core/Core.csproj"
+              "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Core/Core.csproj": {
+                "projectPath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Core/Core.csproj"
               }
             }
           }

@@ -5126,11 +5126,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/kerem/Projects/project 2/backend-dotnet/src/API/API.csproj",
+      "projectUniqueName": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/API.csproj",
       "projectName": "API",
-      "projectPath": "/Users/kerem/Projects/project 2/backend-dotnet/src/API/API.csproj",
+      "projectPath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/API.csproj",
       "packagesPath": "/Users/kerem/.nuget/packages/",
-      "outputPath": "/Users/kerem/Projects/project 2/backend-dotnet/src/API/obj/",
+      "outputPath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/kerem/.nuget/NuGet/NuGet.Config"
@@ -5146,14 +5146,14 @@
         "net9.0": {
           "targetAlias": "net9.0",
           "projectReferences": {
-            "/Users/kerem/Projects/project 2/backend-dotnet/src/Application/Application.csproj": {
-              "projectPath": "/Users/kerem/Projects/project 2/backend-dotnet/src/Application/Application.csproj"
+            "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/Application.csproj": {
+              "projectPath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/Application.csproj"
             },
-            "/Users/kerem/Projects/project 2/backend-dotnet/src/Core/Core.csproj": {
-              "projectPath": "/Users/kerem/Projects/project 2/backend-dotnet/src/Core/Core.csproj"
+            "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Core/Core.csproj": {
+              "projectPath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Core/Core.csproj"
             },
-            "/Users/kerem/Projects/project 2/backend-dotnet/src/Infrastructure/Infrastructure.csproj": {
-              "projectPath": "/Users/kerem/Projects/project 2/backend-dotnet/src/Infrastructure/Infrastructure.csproj"
+            "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Infrastructure/Infrastructure.csproj": {
+              "projectPath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Infrastructure/Infrastructure.csproj"
             }
           }
         }

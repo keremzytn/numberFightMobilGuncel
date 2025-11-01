@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { friendService, FriendDto, UserDto } from '../../src/services/friendService';
 import { socketService } from '../../src/services/socketService';
 import { useAuth } from '../../context/auth';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type TabType = 'friends' | 'pending' | 'search';
 
@@ -238,13 +239,14 @@ export default function FriendsScreen() {
               <TextInput
                 style={styles.searchInput}
                 placeholder="Kullanıcı ara..."
+                placeholderTextColor="#64748b"
                 value={searchTerm}
                 onChangeText={setSearchTerm}
                 autoCapitalize="none"
               />
             </View>
             {loading ? (
-              <ActivityIndicator size="large" color="#007AFF" style={styles.loadingIndicator} />
+              <ActivityIndicator size="large" color="#3b82f6" style={styles.loadingIndicator} />
             ) : (
               <FlatList
                 data={searchResults}
@@ -267,105 +269,116 @@ export default function FriendsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Arkadaşlar</Text>
-      </View>
+    <LinearGradient colors={['#0f172a', '#1e293b', '#334155']} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Arkadaşlar</Text>
+          <Text style={styles.subtitle}>Arkadaşlarınla oyna ve yeni arkadaşlar edin</Text>
+        </View>
 
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'friends' && styles.activeTab]}
-          onPress={() => setActiveTab('friends')}
-        >
-          <Text style={[styles.tabText, activeTab === 'friends' && styles.activeTabText]}>
-            Arkadaşlar
-          </Text>
-          {friends.length > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{friends.length}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'friends' && styles.activeTab]}
+            onPress={() => setActiveTab('friends')}
+          >
+            <Text style={[styles.tabText, activeTab === 'friends' && styles.activeTabText]}>
+              Arkadaşlar
+            </Text>
+            {friends.length > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{friends.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
-          onPress={() => setActiveTab('pending')}
-        >
-          <Text style={[styles.tabText, activeTab === 'pending' && styles.activeTabText]}>
-            İstekler
-          </Text>
-          {pendingRequests.length > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{pendingRequests.length}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
+            onPress={() => setActiveTab('pending')}
+          >
+            <Text style={[styles.tabText, activeTab === 'pending' && styles.activeTabText]}>
+              İstekler
+            </Text>
+            {pendingRequests.length > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{pendingRequests.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'search' && styles.activeTab]}
-          onPress={() => setActiveTab('search')}
-        >
-          <Text style={[styles.tabText, activeTab === 'search' && styles.activeTabText]}>
-            Ara
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'search' && styles.activeTab]}
+            onPress={() => setActiveTab('search')}
+          >
+            <Text style={[styles.tabText, activeTab === 'search' && styles.activeTabText]}>
+              Ara
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.content}>
-        {renderTabContent()}
-      </View>
-    </SafeAreaView>
+        <View style={styles.content}>
+          {renderTabContent()}
+        </View>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+  },
+  safeArea: {
+    flex: 1,
+    paddingHorizontal: 20,
   },
   header: {
-    padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    marginTop: 20,
+    marginBottom: 32,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#f8fafc',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#cbd5e1',
+    lineHeight: 24,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 20,
   },
   tab: {
     flex: 1,
-    paddingVertical: 15,
-    paddingHorizontal: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    borderRadius: 12,
   },
   activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#007AFF',
+    backgroundColor: 'rgba(59, 130, 246, 0.8)',
   },
   tabText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  activeTabText: {
-    color: '#007AFF',
+    fontSize: 15,
+    color: '#cbd5e1',
     fontWeight: '600',
   },
+  activeTabText: {
+    color: '#ffffff',
+  },
   badge: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: '#ef4444',
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    marginLeft: 5,
+    marginLeft: 6,
   },
   badgeText: {
     color: 'white',
@@ -378,23 +391,32 @@ const styles = StyleSheet.create({
   friendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    backgroundColor: 'white',
-    marginVertical: 1,
+    padding: 16,
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    marginBottom: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
   },
   requestItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    backgroundColor: 'white',
-    marginVertical: 1,
+    padding: 16,
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    marginBottom: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
   },
   searchItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    backgroundColor: 'white',
-    marginVertical: 1,
+    padding: 16,
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    marginBottom: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
   },
   friendInfo: {
     flex: 1,
@@ -404,14 +426,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   friendName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
-    color: '#333',
+    color: '#f8fafc',
   },
   friendEmail: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 2,
+    color: '#94a3b8',
+    marginTop: 4,
   },
   onlineIndicator: {
     width: 8,
@@ -420,19 +442,19 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   inviteButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
   },
   inviteButtonText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   requestActions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   actionButton: {
     width: 40,
@@ -442,13 +464,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   acceptButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#10b981',
   },
   rejectButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: '#ef4444',
   },
   addButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#3b82f6',
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -461,20 +483,22 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    margin: 10,
-    paddingHorizontal: 15,
-    borderRadius: 10,
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#334155',
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: 12,
+    color: '#94a3b8',
   },
   searchInput: {
     flex: 1,
     paddingVertical: 12,
     fontSize: 16,
+    color: '#f8fafc',
   },
   loadingIndicator: {
     marginTop: 50,
@@ -483,6 +507,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 50,
     fontSize: 16,
-    color: '#666',
+    color: '#94a3b8',
   },
 });

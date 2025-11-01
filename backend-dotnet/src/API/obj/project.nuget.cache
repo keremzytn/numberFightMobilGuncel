@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "hJvw2/wi2/Q=",
+  "dgSpecHash": "12K6KPFD4P0=",
   "success": true,
-  "projectFilePath": "/Users/kerem/Projects/project 2/backend-dotnet/src/API/API.csproj",
+  "projectFilePath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/API.csproj",
   "expectedPackageFiles": [
     "/Users/kerem/.nuget/packages/automapper/15.0.1/automapper.15.0.1.nupkg.sha512",
     "/Users/kerem/.nuget/packages/bcrypt.net-next/4.0.3/bcrypt.net-next.4.0.3.nupkg.sha512",

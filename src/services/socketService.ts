@@ -1,11 +1,22 @@
-import { HubConnectionBuilder, HubConnection, LogLevel } from '@microsoft/signalr';
+import { HubConnectionBuilder, HubConnection, LogLevel, HttpTransportType, IHttpConnectionOptions } from '@microsoft/signalr';
+import { HttpConnection } from '@microsoft/signalr/dist/esm/HttpConnection';
 import { Platform } from 'react-native';
 import { SIGNALR_URL } from '../config/env';
 import { authService } from './authService';
+import NetInfo from '@react-native-community/netinfo';
+
+// Custom HttpConnection class to prevent NetInfo usage
+class CustomHttpConnection extends HttpConnection {
+    constructor(url: string, options?: IHttpConnectionOptions) {
+        super(url, options);
+        // Force connection to be considered online
+        (this as any).connectionState = 'Connected';
+    }
+}
 
 // WebSocket polyfill for React Native
 if (Platform.OS !== 'web') {
-    (global as any).WebSocket = require('react-native-websocket').default;
+    (global as any).WebSocket = require('react-native-websockets').default;
 }
 
 export interface GameState {
@@ -42,17 +53,42 @@ class SocketService {
 
     async connect(): Promise<void> {
         try {
+            // İnternet bağlantısını kontrol et
+            const netInfo = await NetInfo.fetch();
+            if (!netInfo.isConnected) {
+                throw new Error('İnternet bağlantısı yok');
+            }
+
             const token = await authService.getToken();
             if (!token) throw new Error('Token bulunamadı');
 
             const userId = await this.getUserId();
-            
+
+            const url = `${SIGNALR_URL}?userId=${userId}&access_token=${token}`;
+            const options: IHttpConnectionOptions = {
+                skipNegotiation: true,
+                transport: Platform.OS === 'web' ? undefined : HttpTransportType.WebSockets,
+                timeout: 30000,
+                headers: {
+                    'X-Skip-Connection-Status': 'true' // Custom header to identify our connection
+                }
+            };
+
+            const connectionOptions = {
+                ...options,
+                httpConnectionConstructor: CustomHttpConnection
+            } as IHttpConnectionOptions & { httpConnectionConstructor: typeof CustomHttpConnection };
+
             this.connection = new HubConnectionBuilder()
-                .withUrl(`${SIGNALR_URL}?userId=${userId}&access_token=${token}`, {
-                    skipNegotiation: true,
-                    transport: Platform.OS === 'web' ? undefined : 1 // WebSockets only for mobile
+                .withUrl(url, connectionOptions)
+                .withAutomaticReconnect({
+                    nextRetryDelayInMilliseconds: retryContext => {
+                        if (retryContext.previousRetryCount === 3) {
+                            return null; // Stop retrying after 3 attempts
+                        }
+                        return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 30000);
+                    }
                 })
-                .withAutomaticReconnect()
                 .configureLogging(LogLevel.Information)
                 .build();
 
@@ -65,8 +101,23 @@ class SocketService {
         }
     }
 
+    private unsubscribeNetInfo: (() => void) | null = null;
+
     private setupConnectionEvents(): void {
         if (!this.connection) return;
+
+        // İnternet bağlantısını dinle
+        this.unsubscribeNetInfo = NetInfo.addEventListener(state => {
+            if (!state.isConnected && this.isConnected()) {
+                console.log('İnternet bağlantısı kesildi');
+                this.disconnect();
+            } else if (state.isConnected && !this.isConnected()) {
+                console.log('İnternet bağlantısı tekrar sağlandı, yeniden bağlanılıyor...');
+                this.connect().catch(error => {
+                    console.error('Yeniden bağlanma hatası:', error);
+                });
+            }
+        });
 
         this.connection.onreconnecting(() => {
             this.reconnectAttempts++;
@@ -80,6 +131,11 @@ class SocketService {
 
         this.connection.onclose(() => {
             console.log('Bağlantı kapandı');
+            // Bağlantı kapandığında NetInfo listener'ı temizle
+            if (this.unsubscribeNetInfo) {
+                this.unsubscribeNetInfo();
+                this.unsubscribeNetInfo = null;
+            }
         });
     }
 
@@ -136,6 +192,10 @@ class SocketService {
     }
 
     disconnect(): void {
+        if (this.unsubscribeNetInfo) {
+            this.unsubscribeNetInfo();
+            this.unsubscribeNetInfo = null;
+        }
         this.connection?.stop();
         this.connection = null;
     }
