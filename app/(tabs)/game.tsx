@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Animated, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -68,9 +68,23 @@ export default function GameScreen() {
   const [lastRoundResult, setLastRoundResult] = useState<any>(null);
   const [opponentPlayed, setOpponentPlayed] = useState(false);
   const [loadingProgress] = useState(new Animated.Value(0));
+  const [waitingForOpponent, setWaitingForOpponent] = useState(false);
 
   // Current game state
   const currentGameState = mode === 'online' ? onlineGameState : localGameState;
+
+  // Refs for cleanup
+  const gameIdRef = useRef<string | null>(null);
+  const matchStatusRef = useRef<'idle' | 'searching' | 'found' | 'playing'>('idle');
+
+  // Update refs when state changes
+  useEffect(() => {
+    gameIdRef.current = gameId;
+  }, [gameId]);
+
+  useEffect(() => {
+    matchStatusRef.current = matchStatus;
+  }, [matchStatus]);
 
   // Effects
   useEffect(() => {
@@ -79,29 +93,33 @@ export default function GameScreen() {
     }
     return () => {
       if (mode === 'online') {
+        // Cleanup on unmount - ref'leri kullan
+        const currentGameId = gameIdRef.current;
+        const currentMatchStatus = matchStatusRef.current;
+
+        if (currentGameId && currentMatchStatus === 'playing') {
+          console.log('⚠️ Component unmount - Oyundan çıkılıyor');
+          socketService.leaveGame(currentGameId).catch(err =>
+            console.error('Unmount leaveGame hatası:', err)
+          );
+        }
         cleanup();
       }
     };
   }, [mode]);
 
   useEffect(() => {
-    if (currentGameState?.status === 'playing' && timeLeft > 0 && matchStatus === 'playing') {
+    if (matchStatus === 'playing' && timeLeft > 0) {
       const timer = setTimeout(() => {
         setTimeLeft(timeLeft - 1);
       }, 1000);
       return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && currentGameState?.status === 'playing') {
+    } else if (timeLeft === 0 && matchStatus === 'playing') {
       handleAutoCardSelection();
     }
-  }, [timeLeft, currentGameState?.status, matchStatus]);
+  }, [timeLeft, matchStatus]);
 
-  useEffect(() => {
-    if (currentGameState?.status === 'playing') {
-      setTimeLeft(30);
-      setSelectedCard(null);
-      setShowResult(false);
-    }
-  }, [currentGameState?.currentRound]);
+  // Bu useEffect'i kaldırdık - artık gameState handler içinde yapıyoruz
 
   useEffect(() => {
     let isSubscribed = true;
@@ -155,9 +173,39 @@ export default function GameScreen() {
   }, [mode, onlineGameState, gameEngine]);
 
   const goBack = useCallback(() => {
+    if (mode === 'online' && gameId && matchStatus === 'playing') {
+      Alert.alert(
+        'Oyundan Çık',
+        'Oyundan çıkarsanız kaybetmiş sayılacaksınız. Emin misiniz?',
+        [
+          { text: 'İptal', style: 'cancel' },
+          {
+            text: 'Çık',
+            style: 'destructive',
+            onPress: () => {
+              handleGameExit();
+              router.push('/');
+            }
+          }
+        ]
+      );
+    } else {
+      cleanup();
+      router.push('/');
+    }
+  }, [mode, gameId, matchStatus]);
+
+  const handleGameExit = async () => {
+    if (gameId && matchStatus === 'playing') {
+      try {
+        await socketService.leaveGame(gameId);
+        console.log('Oyundan çıkış yapıldı');
+      } catch (error) {
+        console.error('Oyundan çıkış hatası:', error);
+      }
+    }
     cleanup();
-    router.push('/');
-  }, [mode, gameId]);
+  };
 
   const cleanup = () => {
     if (mode === 'online') {
@@ -168,6 +216,7 @@ export default function GameScreen() {
       socketService.off('waitingForMatch');
       socketService.off('matchFound');
       socketService.off('gameState');
+      socketService.off('cardPlayed');
       socketService.off('opponentPlayed');
       socketService.off('roundResult');
       socketService.off('gameEnd');
@@ -181,6 +230,7 @@ export default function GameScreen() {
     setIsConnected(false);
     setConnectionError(null);
     setReconnecting(false);
+    setWaitingForOpponent(false);
   };
 
   const initializeOnlineGame = async () => {
@@ -204,30 +254,62 @@ export default function GameScreen() {
 
       socketService.off('matchFound');
       socketService.on('matchFound', (data: { gameId: string; isPlayer1: boolean; opponentId: string }) => {
-        console.log('Eşleşme bulundu:', data);
+        console.log('✅ Eşleşme bulundu:', data.gameId);
         setMatchStatus('found');
         setGameId(data.gameId);
       });
 
+      let currentGameId: string | null = null;
+
       socketService.off('gameState');
       socketService.on('gameState', (gameState: GameState) => {
-        console.log('Oyun durumu:', gameState);
-        setMatchStatus('playing');
-        setOnlineGameState(gameState);
-        setTimeLeft(30);
-        setSelectedCard(null);
-        setShowResult(false);
-        setOpponentPlayed(false);
+        // İlk gameState'de oyun ID'sini kaydet
+        if (!currentGameId) {
+          currentGameId = gameState.gameId;
+          console.log('Oyun ID ayarlandı:', currentGameId);
+        }
+
+        // Sadece aktif oyuna ait event'leri dinle
+        if (gameState.gameId !== currentGameId) {
+          console.log('Farklı oyun ID, ignore ediliyor:', gameState.gameId);
+          return;
+        }
+
+        console.log(`[${gameState.gameId.substring(0, 8)}] Oyun durumu - Round: ${gameState.currentRound}`);
+
+        setOnlineGameState((prevState) => {
+          // Sadece round değiştiğinde timer'ı resetle
+          const isNewRound = !prevState || prevState.currentRound !== gameState.currentRound;
+
+          if (isNewRound) {
+            console.log(`Yeni round başladı: ${gameState.currentRound}`);
+            setTimeLeft(30);
+            setSelectedCard(null);
+            setShowResult(false);
+            setOpponentPlayed(false);
+            setWaitingForOpponent(false);
+          }
+
+          setMatchStatus('playing');
+          return gameState;
+        });
+      });
+
+      socketService.off('cardPlayed');
+      socketService.on('cardPlayed', (data: { cardNumber: number }) => {
+        console.log(`🃏 Kartınız oynanıyor: ${data.cardNumber}`);
       });
 
       socketService.off('opponentPlayed');
       socketService.on('opponentPlayed', () => {
+        console.log('👤 Rakip kart seçti');
         setOpponentPlayed(true);
       });
 
       socketService.off('roundResult');
       socketService.on('roundResult', (result: RoundResultType) => {
-        console.log('Round sonucu:', result);
+        console.log(`🏁 Round ${result.round} sonucu - Kazanan: ${result.isWinner ? 'Sen' : 'Rakip'}`);
+        setWaitingForOpponent(false);
         setLastRoundResult({
           round: result.round,
           player1Card: result.opponentCard,
@@ -237,11 +319,16 @@ export default function GameScreen() {
           player2Score: result.player2Score,
         });
         setShowResult(true);
+
+        // 2 saniye sonra sonucu gizle
+        setTimeout(() => {
+          setShowResult(false);
+        }, 2500);
       });
 
       socketService.off('gameEnd');
       socketService.on('gameEnd', (result: GameEndResult) => {
-        console.log('Oyun bitti:', result);
+        console.log('🏆 Oyun bitti - Kazanan:', result.isWinner ? 'Sen' : 'Rakip');
         showOnlineGameEndDialog(result);
       });
 
@@ -249,6 +336,17 @@ export default function GameScreen() {
       socketService.on('error', (error: string) => {
         console.error('Oyun hatası:', error);
         Alert.alert('Hata', error);
+      });
+
+      socketService.off('opponentLeft');
+      socketService.on('opponentLeft', () => {
+        console.log('👋 Rakip oyundan ayrıldı');
+        Alert.alert(
+          'Rakip Ayrıldı',
+          'Rakibiniz oyundan ayrıldı. Otomatik olarak kazandınız!',
+          [{ text: 'Tamam', onPress: () => router.push('/') }]
+        );
+        cleanup();
       });
 
       // Start matchmaking
@@ -269,7 +367,17 @@ export default function GameScreen() {
 
     if (mode === 'online' && gameId) {
       // Online mode
-      socketService.playCard(gameId, cardNumber);
+      console.log(`Kart seçildi: ${cardNumber}, GameId: ${gameId}`);
+      socketService.playCard(gameId, cardNumber)
+        .then(() => {
+          console.log('Kart başarıyla gönderildi');
+          setWaitingForOpponent(true);
+        })
+        .catch((error) => {
+          console.error('Kart gönderme hatası:', error);
+          Alert.alert('Hata', 'Kart gönderilemedi');
+          setSelectedCard(null);
+        });
     } else {
       // Bot mode
       let botCard = botPlayer.selectCard(gameEngine.getValidCards(2), localGameState);
@@ -358,18 +466,25 @@ export default function GameScreen() {
           createdAt: new Date().toISOString(),
           mode: 'online',
         })
-      });
+      }).catch(err => console.error('Match kaydetme hatası:', err));
     }
 
     Alert.alert(
       'Oyun Bitti',
       message,
       [
-        { text: 'Ana Menü', onPress: () => router.push('/') },
         {
-          text: 'Tekrar Oyna', onPress: () => {
-            setMatchStatus('idle');
-            initializeOnlineGame();
+          text: 'Ana Menü',
+          onPress: () => {
+            cleanup();
+            router.push('/');
+          }
+        },
+        {
+          text: 'Tekrar Oyna',
+          onPress: () => {
+            cleanup();
+            router.replace('/game?mode=online');
           }
         }
       ]
@@ -535,6 +650,12 @@ export default function GameScreen() {
               <Clock size={20} color="#f59e0b" />
               <Text style={styles.timerText}>{timeLeft}s</Text>
             </View>
+            {waitingForOpponent && mode === 'online' && (
+              <View style={styles.waitingIndicator}>
+                <ActivityIndicator size="small" color="#f59e0b" />
+                <Text style={styles.waitingText}>Rakip bekleniyor...</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -765,5 +886,20 @@ const styles = StyleSheet.create({
   errorText: {
     color: 'red',
     fontSize: 12,
+  },
+  waitingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    borderRadius: 12,
+  },
+  waitingText: {
+    fontSize: 14,
+    color: '#f59e0b',
+    fontWeight: '600',
   },
 });

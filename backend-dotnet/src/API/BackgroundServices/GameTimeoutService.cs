@@ -36,13 +36,29 @@ public class GameTimeoutService : BackgroundService
                         if (game.RoundStartTime.HasValue)
                         {
                             var elapsedSeconds = (DateTime.UtcNow - game.RoundStartTime.Value).TotalSeconds;
+
+                            // Çok eski terk edilmiş oyunları kapat (5 dakikadan eski)
+                            if (elapsedSeconds >= 300)
+                            {
+                                _logger.LogWarning($"🗑️ Terk edilmiş oyun kapatılıyor: GameId={game.Id}");
+                                var winner = game.Player1Score > game.Player2Score ? game.Player1Id :
+                                           game.Player2Score > game.Player1Score ? game.Player2Id :
+                                           game.Player1Id; // Berabere ise Player1 kazansın
+                                game.EndGameWithWinner(winner);
+                                await gameRepository.UpdateAsync(game);
+                                continue;
+                            }
+
+                            // SADECE timeout olduğunda işlem yap ve event gönder
                             if (elapsedSeconds >= ROUND_DURATION_SECONDS)
                             {
+                                _logger.LogInformation($"⏰ Timeout: GameId={game.Id}, Round={game.CurrentRound}");
+
                                 // Round süresi doldu, otomatik hamle yap
                                 game.HandleTimeout();
                                 await gameRepository.UpdateAsync(game);
 
-                                // Oyun durumunu güncelle
+                                // Oyun durumunu güncelle - SADECE timeout olduğunda
                                 await SendGameState(hubContext, game);
 
                                 // Oyun bittiyse sonucu gönder
@@ -66,6 +82,7 @@ public class GameTimeoutService : BackgroundService
 
     private static async Task SendGameState(IHubContext<GameHub> hubContext, Game game)
     {
+        // Her oyuncu için ayrı state hazırla
         var player1State = new
         {
             gameId = game.Id,
@@ -74,7 +91,9 @@ public class GameTimeoutService : BackgroundService
             player2Score = game.Player2Score,
             validCards = game.GetValidCards(game.Player1Id),
             forbiddenCards = game.Player1ForbiddenCards,
-            roundStartTime = game.RoundStartTime
+            roundStartTime = game.RoundStartTime,
+            status = game.Status.ToString(),
+            opponentId = game.Player2Id
         };
 
         var player2State = new
@@ -85,13 +104,16 @@ public class GameTimeoutService : BackgroundService
             player2Score = game.Player2Score,
             validCards = game.GetValidCards(game.Player2Id),
             forbiddenCards = game.Player2ForbiddenCards,
-            roundStartTime = game.RoundStartTime
+            roundStartTime = game.RoundStartTime,
+            status = game.Status.ToString(),
+            opponentId = game.Player1Id
         };
 
-        await hubContext.Clients.Group($"user_{game.Player1Id}").SendAsync("gameState", player1State);
+        // Her oyuncuya kendi state'ini gönder
+        await hubContext.Clients.Group($"game_{game.Id}_player_{game.Player1Id}").SendAsync("gameState", player1State);
         if (game.Player2Id != "bot")
         {
-            await hubContext.Clients.Group($"user_{game.Player2Id}").SendAsync("gameState", player2State);
+            await hubContext.Clients.Group($"game_{game.Id}_player_{game.Player2Id}").SendAsync("gameState", player2State);
         }
     }
 

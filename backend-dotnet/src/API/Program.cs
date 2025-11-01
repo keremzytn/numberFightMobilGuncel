@@ -101,10 +101,43 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// 🧹 Startup'ta tüm aktif oyunları temizle
+using (var scope = app.Services.CreateScope())
+{
+    var gameRepository = scope.ServiceProvider.GetRequiredService<IGameRepository>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        var activeGames = await gameRepository.GetActiveGamesAsync();
+        var gameList = activeGames.ToList();
+        if (gameList.Any())
+        {
+            logger.LogWarning($"🧹 Startup: {gameList.Count} aktif oyun temizleniyor...");
+            foreach (var game in gameList)
+            {
+                game.EndGameWithWinner(game.Player1Score > game.Player2Score ? game.Player1Id :
+                                       game.Player2Score > game.Player1Score ? game.Player2Id :
+                                       game.Player1Id);
+                await gameRepository.UpdateAsync(game);
+            }
+            logger.LogInformation("✅ Tüm aktif oyunlar temizlendi");
+        }
+        else
+        {
+            logger.LogInformation("✅ Temizlenecek aktif oyun yok");
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "❌ Oyun temizleme sırasında hata oluştu");
+    }
+}
+
 // ✅ NGROK UYARI SAYFASINI KALDIRAN MIDDLEWARE
 app.Use(async (context, next) =>
 {
-    context.Response.Headers.Add("ngrok-skip-browser-warning", "true");
+    context.Response.Headers["ngrok-skip-browser-warning"] = "true";
     await next();
 });
 

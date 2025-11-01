@@ -169,4 +169,13 @@ public class Game : BaseEntity
                 PlayCard(Player2Id, validCards.Min());
         }
     }
+
+    public void EndGameWithWinner(string winnerId)
+    {
+        if (Status != GameStatus.InProgress)
+            throw new InvalidOperationException("Oyun aktif değil");
+
+        Status = GameStatus.Completed;
+        WinnerId = winnerId;
+    }
 }

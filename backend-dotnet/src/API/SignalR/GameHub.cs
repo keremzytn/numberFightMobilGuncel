@@ -80,6 +80,9 @@ public class GameHub : Hub
 
     public async Task FindMatch(string userId, string mode = "online")
     {
+        // Kullanıcının eski oyun gruplarından çıkar
+        await RemoveUserFromAllGameGroups(userId);
+
         if (mode == "bot")
         {
             await StartBotGame(userId);
@@ -106,8 +109,11 @@ public class GameHub : Hub
 
             if (!string.IsNullOrEmpty(player1Connection) && !string.IsNullOrEmpty(player2Connection))
             {
+                // Her oyuncu için ayrı grup - her oyuncuya farklı state göndermek için
                 await Groups.AddToGroupAsync(player1Connection, $"game_{game.Id}");
                 await Groups.AddToGroupAsync(player2Connection, $"game_{game.Id}");
+                await Groups.AddToGroupAsync(player1Connection, $"game_{game.Id}_player_{player1}");
+                await Groups.AddToGroupAsync(player2Connection, $"game_{game.Id}_player_{player2}");
 
                 await Clients.Client(player1Connection).SendAsync("matchFound", new { gameId = game.Id, isPlayer1 = true, opponentId = player2 });
                 await Clients.Client(player2Connection).SendAsync("matchFound", new { gameId = game.Id, isPlayer1 = false, opponentId = player1 });
@@ -131,6 +137,7 @@ public class GameHub : Hub
         if (!string.IsNullOrEmpty(userConnection))
         {
             await Groups.AddToGroupAsync(userConnection, $"game_{game.Id}");
+            await Groups.AddToGroupAsync(userConnection, $"game_{game.Id}_player_{userId}");
             await Clients.Client(userConnection).SendAsync("matchFound", new { gameId = game.Id, isPlayer1 = true, opponentId = "bot" });
 
             await Task.Delay(2000);
@@ -152,9 +159,14 @@ public class GameHub : Hub
 
         try
         {
+            Console.WriteLine($"PlayCard çağrıldı - GameId: {gameId}, UserId: {userId}, Card: {cardNumber}");
             var previousRound = game.CurrentRound;
 
             game.PlayCard(userId, cardNumber);
+            Console.WriteLine($"Kart oynadı - Player1Card: {game.Player1Card}, Player2Card: {game.Player2Card}");
+
+            // Oyunu kaydet (diğer oyuncu kart oynamadan önce)
+            await _gameRepository.UpdateAsync(game);
 
             // Bot modu kontrolü
             if (game.Player2Id == "bot" && game.Player1Card.HasValue && !game.Player2Card.HasValue)
@@ -171,6 +183,7 @@ public class GameHub : Hub
             // Her iki oyuncu da kart oynadıysa round sonucunu gönder
             if (game.Player1Card.HasValue && game.Player2Card.HasValue)
             {
+                Console.WriteLine($"Her iki oyuncu da kart oynadı - Round çözülüyor...");
                 // Kartları kaydet (ResolveRound bunları null yapacak)
                 var player1Card = game.Player1Card.Value;
                 var player2Card = game.Player2Card.Value;
@@ -178,9 +191,11 @@ public class GameHub : Hub
                 // Round'u çöz
                 game.ResolveRound();
                 await _gameRepository.UpdateAsync(game);
+                Console.WriteLine($"Round çözüldü - Score: {game.Player1Score}-{game.Player2Score}");
 
                 // Round sonucunu hesapla ve gönder
                 await SendRoundResult(game, previousRound, player1Card, player2Card);
+                Console.WriteLine("Round sonucu gönderildi");
 
                 if (game.Status == GameStatus.Completed)
                 {
@@ -238,10 +253,10 @@ public class GameHub : Hub
             {
                 gameId = game.Id,
                 currentRound = game.CurrentRound,
-                player1Score = game.Player2Score,
-                player2Score = game.Player1Score,
+                player1Score = game.Player1Score,  // Player2'ye de gerçek skorları gönder
+                player2Score = game.Player2Score,
                 validCards = game.GetValidCards(game.Player2Id),
-                forbiddenCards = game.Player2ForbiddenCards,
+                forbiddenCards = game.Player2ForbiddenCards,  // Player2'nin kendi yasaklı kartları
                 roundStartTime = game.RoundStartTime,
                 status = game.Status.ToString(),
                 opponentId = game.Player1Id
@@ -354,6 +369,35 @@ public class GameHub : Hub
                     isOnline = isOnline
                 });
             }
+        }
+    }
+
+    private async Task RemoveUserFromAllGameGroups(string userId)
+    {
+        try
+        {
+            // Kullanıcının aktif olmayan tüm oyunlarını bul
+            var userGames = await _gameRepository.GetUserGamesAsync(userId);
+            var connectionId = _userConnections.GetValueOrDefault(userId);
+
+            if (string.IsNullOrEmpty(connectionId))
+                return;
+
+            foreach (var game in userGames)
+            {
+                // Sadece tamamlanmış veya bekleyen oyun gruplarından çıkar
+                if (game.Status != GameStatus.InProgress)
+                {
+                    await Groups.RemoveFromGroupAsync(connectionId, $"game_{game.Id}");
+                    await Groups.RemoveFromGroupAsync(connectionId, $"game_{game.Id}_player_{userId}");
+                    await Groups.RemoveFromGroupAsync(connectionId, $"user_{userId}");
+                    Console.WriteLine($"🧹 Kullanıcı eski oyun grubundan çıkarıldı: {game.Id}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"RemoveUserFromAllGameGroups hatası: {ex.Message}");
         }
     }
 
@@ -485,6 +529,65 @@ public class GameHub : Hub
         }
         catch (Exception ex)
         {
+            await Clients.Caller.SendAsync("error", ex.Message);
+        }
+    }
+
+    public async Task LeaveGame(string gameId)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var game = await _gameRepository.GetByIdAsync(gameId);
+
+            if (game == null)
+            {
+                Console.WriteLine($"LeaveGame: Oyun bulunamadı - GameId: {gameId}");
+                return;
+            }
+
+            if (game.Status != GameStatus.InProgress)
+            {
+                Console.WriteLine($"LeaveGame: Oyun aktif değil - Status: {game.Status}");
+                return;
+            }
+
+            Console.WriteLine($"LeaveGame çağrıldı - GameId: {gameId}, UserId: {userId}");
+
+            // Oyundan ayrılan kullanıcıyı belirle
+            var leavingUserId = userId;
+            var remainingUserId = game.Player1Id == userId ? game.Player2Id : game.Player1Id;
+
+            // Oyunu tamamla - Rakip kazandı
+            game.EndGameWithWinner(remainingUserId);
+            await _gameRepository.UpdateAsync(game);
+
+            Console.WriteLine($"Oyun tamamlandı - Kazanan: {remainingUserId}");
+
+            // Maç sonucunu kaydet
+            if (remainingUserId != "bot")
+            {
+                var match = Match.Create(
+                    game.Player1Id,
+                    game.Player2Id,
+                    game.Player1Score,
+                    game.Player2Score,
+                    GameMode.Online
+                );
+                await _matchRepository.AddAsync(match);
+            }
+
+            // Rakibe bildirim gönder
+            var remainingConnection = _userConnections.GetValueOrDefault(remainingUserId);
+            if (!string.IsNullOrEmpty(remainingConnection))
+            {
+                await Clients.Client(remainingConnection).SendAsync("opponentLeft");
+                Console.WriteLine($"Rakibe 'opponentLeft' bildirimi gönderildi: {remainingUserId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"LeaveGame hatası: {ex.Message}");
             await Clients.Caller.SendAsync("error", ex.Message);
         }
     }

@@ -123,6 +123,12 @@ class SocketService {
         await this.connection.invoke('GetOnlineFriends');
     }
 
+    async leaveGame(gameId: string): Promise<void> {
+        if (!this.connection) throw new Error('Bağlantı yok');
+        console.log('🚪 Oyundan çıkılıyor:', gameId);
+        await this.connection.invoke('LeaveGame', gameId);
+    }
+
     private async getUserId(): Promise<string> {
         const token = await authService.getToken();
         if (!token) throw new Error('Token bulunamadı');
