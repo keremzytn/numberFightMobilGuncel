@@ -1,12 +1,107 @@
 @model IEnumerable<Game>
 @{
     ViewData["Title"] = "Tüm Oyunlar";
+    var filter = ViewBag.Filter as API.Models.Filters.GameFilter ?? new API.Models.Filters.GameFilter();
 }
 
 <div class="py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1><i class="bi bi-trophy-fill"></i> Oyun Geçmişi</h1>
         <span class="badge bg-primary fs-5">Toplam: @Model.Count()</span>
+    </div>
+
+    @* Filtreleme Formu *@
+    <div class="card mb-3">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="bi bi-funnel"></i> Oyun Filtreleme
+                <button class="btn btn-sm btn-outline-secondary float-end" type="button" data-bs-toggle="collapse" data-bs-target="#gameFilterCollapse">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </h5>
+        </div>
+        <div class="collapse show" id="gameFilterCollapse">
+            <div class="card-body">
+                <form method="get" asp-controller="Admin" asp-action="Games">
+                    <div class="row g-3">
+                        @* Oyuncu ID *@
+                        <div class="col-md-3">
+                            <label class="form-label"><i class="bi bi-person"></i> Oyuncu ID</label>
+                            <input type="text" name="PlayerId" class="form-control" placeholder="Oyuncu ID..." value="@filter.PlayerId">
+                        </div>
+
+                        @* Durum *@
+                        <div class="col-md-2">
+                            <label class="form-label"><i class="bi bi-flag"></i> Durum</label>
+                            <select name="Status" class="form-select">
+                                <option value="">Tümü</option>
+                                <option value="0" selected="@(filter.Status == GameStatus.Waiting)">Bekliyor</option>
+                                <option value="1" selected="@(filter.Status == GameStatus.InProgress)">Devam Ediyor</option>
+                                <option value="2" selected="@(filter.Status == GameStatus.Completed)">Tamamlandı</option>
+                                <option value="3" selected="@(filter.Status == GameStatus.Cancelled)">İptal</option>
+                            </select>
+                        </div>
+
+                        @* Kazanan *@
+                        <div class="col-md-2">
+                            <label class="form-label"><i class="bi bi-trophy"></i> Kazanan ID</label>
+                            <input type="text" name="WinnerId" class="form-control" placeholder="Kazanan..." value="@filter.WinnerId">
+                        </div>
+
+                        @* Min Skor *@
+                        <div class="col-md-2">
+                            <label class="form-label"><i class="bi bi-graph-up"></i> Min Skor</label>
+                            <input type="number" name="MinScore" class="form-control" placeholder="0" value="@filter.MinScore">
+                        </div>
+
+                        @* Sıralama *@
+                        <div class="col-md-2">
+                            <label class="form-label"><i class="bi bi-sort-down"></i> Sırala</label>
+                            <select name="SortBy" class="form-select">
+                                <option value="CreatedAt" selected="@(filter.SortBy == "CreatedAt" || filter.SortBy == null)">Tarih</option>
+                                <option value="Status" selected="@(filter.SortBy == "Status")">Durum</option>
+                            </select>
+                        </div>
+
+                        @* Sıralama Yönü *@
+                        <div class="col-md-1">
+                            <label class="form-label"><i class="bi bi-arrow-down-up"></i> Yön</label>
+                            <select name="SortDescending" class="form-select">
+                                <option value="true" selected="@(filter.SortDescending)">⬇</option>
+                                <option value="false" selected="@(!filter.SortDescending)">⬆</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    @* Tarih Aralığı *@
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-3">
+                            <label class="form-label"><i class="bi bi-calendar"></i> Başlangıç Tarihi</label>
+                            <input type="date" name="StartDate" class="form-control" value="@filter.StartDate?.ToString("yyyy-MM-dd")">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label"><i class="bi bi-calendar-check"></i> Bitiş Tarihi</label>
+                            <input type="date" name="EndDate" class="form-control" value="@filter.EndDate?.ToString("yyyy-MM-dd")">
+                        </div>
+                    </div>
+
+                    @* Butonlar *@
+                    <div class="row g-3 mt-2">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Filtrele
+                            </button>
+                            <a asp-controller="Admin" asp-action="Games" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Temizle
+                            </a>
+                            <span class="ms-3 text-muted">
+                                <i class="bi bi-info-circle"></i> @Model.Count() oyun bulundu (Son 100)
+                            </span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <div class="card">
@@ -80,3 +175,102 @@
     </div>
 </div>
 
+@section Scripts {
+<script>
+    // Hızlı filtre butonları
+    const quickGameFilters = document.createElement('div');
+    quickGameFilters.className = 'mt-3';
+    quickGameFilters.innerHTML = `
+        <div class="d-flex gap-2 flex-wrap">
+            <span class="text-muted me-2">Hızlı Filtreler:</span>
+            <button type="button" class="btn btn-sm btn-outline-success quick-game-filter" data-filter="inprogress">
+                <i class="bi bi-play-circle"></i> Devam Eden
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary quick-game-filter" data-filter="completed">
+                <i class="bi bi-check-circle"></i> Tamamlanan
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger quick-game-filter" data-filter="cancelled">
+                <i class="bi bi-x-circle"></i> İptal
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-info quick-game-filter" data-filter="today">
+                <i class="bi bi-calendar-day"></i> Bugün
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-warning quick-game-filter" data-filter="week">
+                <i class="bi bi-calendar-week"></i> Bu Hafta
+            </button>
+        </div>
+    `;
+    
+    const gameForm = document.querySelector('form[action*="Games"]');
+    if (gameForm) {
+        gameForm.appendChild(quickGameFilters);
+    }
+
+    // Hızlı filtre click eventi
+    document.querySelectorAll('.quick-game-filter').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const filter = this.getAttribute('data-filter');
+            const form = gameForm;
+            
+            // Tüm filtreleri temizle
+            form.querySelectorAll('input, select').forEach(input => {
+                if (input.type === 'text' || input.type === 'number' || input.type === 'date') {
+                    input.value = '';
+                } else if (input.tagName === 'SELECT') {
+                    input.selectedIndex = 0;
+                }
+            });
+            
+            const today = new Date();
+            const weekAgo = new Date(today);
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            
+            // İlgili filtreyi uygula
+            switch(filter) {
+                case 'inprogress':
+                    form.querySelector('select[name="Status"]').value = '1';
+                    break;
+                case 'completed':
+                    form.querySelector('select[name="Status"]').value = '2';
+                    break;
+                case 'cancelled':
+                    form.querySelector('select[name="Status"]').value = '3';
+                    break;
+                case 'today':
+                    const todayStr = today.toISOString().split('T')[0];
+                    form.querySelector('input[name="StartDate"]').value = todayStr;
+                    form.querySelector('input[name="EndDate"]').value = todayStr;
+                    break;
+                case 'week':
+                    const weekStr = weekAgo.toISOString().split('T')[0];
+                    const todayStr2 = today.toISOString().split('T')[0];
+                    form.querySelector('input[name="StartDate"]').value = weekStr;
+                    form.querySelector('input[name="EndDate"]').value = todayStr2;
+                    break;
+            }
+            
+            form.submit();
+        });
+    });
+
+    // Oyun durumlarını renklendir
+    const statusBadges = document.querySelectorAll('.badge');
+    statusBadges.forEach(badge => {
+        const text = badge.textContent.trim();
+        if (text.includes('Devam')) {
+            badge.classList.add('pulse-animation');
+        }
+    });
+</script>
+
+<style>
+    .pulse-animation {
+        animation: pulse 2s infinite;
+    }
+    
+    @@keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+</style>
+}

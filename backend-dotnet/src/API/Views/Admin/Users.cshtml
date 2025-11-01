@@ -1,6 +1,7 @@
 @model IEnumerable<User>
 @{
     ViewData["Title"] = "Kullanıcılar";
+    var filter = ViewBag.Filter as API.Models.Filters.UserFilter ?? new API.Models.Filters.UserFilter();
 }
 
 <div class="py-4">
@@ -9,12 +10,179 @@
         <span class="badge bg-primary fs-5">Toplam: @Model.Count()</span>
     </div>
 
+    @* Arama ve Filtreleme Formu *@
+    <div class="card mb-3">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="bi bi-funnel"></i> Arama ve Filtreleme
+                <button class="btn btn-sm btn-outline-secondary float-end" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#filterCollapse">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </h5>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-controller="Admin" asp-action="Users" id="filterForm">
+                    <div class="row g-3">
+                        @* Arama *@
+                        <div class="col-md-4">
+                            <label class="form-label"><i class="bi bi-search"></i> Arama</label>
+                            <input type="text" name="SearchQuery" class="form-control" placeholder="İsim, email, ID..."
+                                value="@filter.SearchQuery">
+                        </div>
+
+                        @* Durum *@
+                        <div class="col-md-2">
+                            <label class="form-label"><i class="bi bi-circle-fill"></i> Durum</label>
+                            <select name="IsOnline" class="form-select">
+                                <option value="">Tümü</option>
+                                <option value="true" selected="@(filter.IsOnline == true)">Online</option>
+                                <option value="false" selected="@(filter.IsOnline == false)">Offline</option>
+                            </select>
+                        </div>
+
+                        @* Ban Durumu *@
+                        <div class="col-md-2">
+                            <label class="form-label"><i class="bi bi-ban"></i> Ban</label>
+                            <select name="IsBanned" class="form-select">
+                                <option value="">Tümü</option>
+                                <option value="true" selected="@(filter.IsBanned == true)">Banlı</option>
+                                <option value="false" selected="@(filter.IsBanned == false)">Aktif</option>
+                            </select>
+                        </div>
+
+                        @* Sıralama *@
+                        <div class="col-md-2">
+                            <label class="form-label"><i class="bi bi-sort-down"></i> Sırala</label>
+                            <select name="SortBy" class="form-select">
+                                <option value="CreatedAt"
+                                    selected="@(filter.SortBy == "CreatedAt" || filter.SortBy == null)">Kayıt Tarihi
+                                </option>
+                                <option value="Username" selected="@(filter.SortBy == "Username")">İsim</option>
+                                <option value="Gold" selected="@(filter.SortBy == "Gold")">Gold</option>
+                                <option value="LastSeenAt" selected="@(filter.SortBy == "LastSeenAt")">Son Görülme
+                                </option>
+                            </select>
+                        </div>
+
+                        @* Sıralama Yönü *@
+                        <div class="col-md-2">
+                            <label class="form-label"><i class="bi bi-arrow-down-up"></i> Yön</label>
+                            <select name="SortDescending" class="form-select">
+                                <option value="true" selected="@(filter.SortDescending)">Azalan</option>
+                                <option value="false" selected="@(!filter.SortDescending)">Artan</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    @* Gelişmiş Filtreler *@
+                    <div class="row g-3 mt-2">
+                        <div class="col-12">
+                            <button class="btn btn-sm btn-link text-decoration-none" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#advancedFilters">
+                                <i class="bi bi-plus-circle"></i> Gelişmiş Filtreler
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="collapse" id="advancedFilters">
+                        <div class="row g-3 mt-1">
+                            @* Tarih Aralığı *@
+                            <div class="col-md-3">
+                                <label class="form-label">Kayıt Başlangıç</label>
+                                <input type="date" name="RegisteredAfter" class="form-control"
+                                    value="@filter.RegisteredAfter?.ToString("yyyy-MM-dd")">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Kayıt Bitiş</label>
+                                <input type="date" name="RegisteredBefore" class="form-control"
+                                    value="@filter.RegisteredBefore?.ToString("yyyy-MM-dd")">
+                            </div>
+
+                            @* Gold Aralığı *@
+                            <div class="col-md-3">
+                                <label class="form-label">Min Gold</label>
+                                <input type="number" name="MinGold" class="form-control" placeholder="0"
+                                    value="@filter.MinGold">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Max Gold</label>
+                                <input type="number" name="MaxGold" class="form-control" placeholder="999999"
+                                    value="@filter.MaxGold">
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Butonlar *@
+                    <div class="row g-3 mt-2">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Ara
+                            </button>
+                            <a asp-controller="Admin" asp-action="Users" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Temizle
+                            </a>
+                            <span class="ms-3 text-muted">
+                                <i class="bi bi-info-circle"></i> @Model.Count() sonuç bulundu
+                            </span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @* Toplu İşlem Toolbar *@
+    <div class="card mb-3" id="bulkActionsCard" style="display: none;">
+        <div class="card-body bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong><span id="selectedCount">0</span> kullanıcı seçildi</strong>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary btn-sm" onclick="bulkAddGold()">
+                        <i class="bi bi-coin"></i> Gold Ekle
+                    </button>
+                    <button type="button" class="btn btn-warning btn-sm" onclick="bulkRemoveGold()">
+                        <i class="bi bi-dash-circle"></i> Gold Çıkar
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="bulkBan()">
+                        <i class="bi bi-ban"></i> Banla
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm" onclick="bulkUnban()">
+                        <i class="bi bi-check-circle"></i> Ban Kaldır
+                    </button>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-info btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="bi bi-download"></i> Export
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="exportCSV()"><i
+                                        class="bi bi-file-earmark-text"></i> CSV</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="exportJSON()"><i
+                                        class="bi bi-file-earmark-code"></i> JSON</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="exportSelected()"><i
+                                        class="bi bi-file-earmark-check"></i> Sadece Seçililer</a></li>
+                        </ul>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="clearSelection()">
+                        <i class="bi bi-x"></i> Temizle
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead class="table-light">
                         <tr>
+                            <th width="30">
+                                <input type="checkbox" id="selectAll" class="form-check-input">
+                            </th>
                             <th>Kullanıcı Adı</th>
                             <th>Email</th>
                             <th>Durum</th>
@@ -28,6 +196,11 @@
                         @foreach (var user in Model)
                         {
                             <tr>
+                                <td>
+                                    <input type="checkbox" class="form-check-input user-checkbox" value="@user.Id"
+                                        data-username="@user.Username" data-email="@user.Email" data-gold="@user.Gold"
+                                        data-isbanned="@user.IsBanned.ToString().ToLower()">
+                                </td>
                                 <td>
                                     <strong>@user.Username</strong>
                                 </td>
@@ -79,3 +252,309 @@
     </div>
 </div>
 
+@section Scripts {
+    <script>
+        // Gerçek zamanlı arama (debounce ile)
+        let searchTimeout;
+        const searchInput = document.querySelector('input[name="SearchQuery"]');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    // Auto-submit özelliği eklenmek istenirse:
+                    // document.getElementById('filterForm').submit();
+                }, 500);
+            });
+        }
+
+        // Enter tuşu ile arama
+        searchInput?.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('filterForm').submit();
+            }
+        });
+
+        // Hızlı filtre butonları ekle
+        const quickFilters = document.createElement('div');
+        quickFilters.className = 'mt-3';
+        quickFilters.innerHTML = `
+                        <div class="d-flex gap-2 flex-wrap">
+                            <span class="text-muted me-2">Hızlı Filtreler:</span>
+                            <button type="button" class="btn btn-sm btn-outline-success quick-filter" data-filter="online">
+                                <i class="bi bi-circle-fill"></i> Online
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary quick-filter" data-filter="offline">
+                                <i class="bi bi-circle"></i> Offline
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger quick-filter" data-filter="banned">
+                                <i class="bi bi-ban"></i> Banlı
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-warning quick-filter" data-filter="richest">
+                                <i class="bi bi-coin"></i> En Zengin
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-info quick-filter" data-filter="newest">
+                                <i class="bi bi-clock"></i> En Yeni
+                            </button>
+                        </div>
+                    `;
+
+        const formElement = document.getElementById('filterForm');
+        if (formElement) {
+            formElement.appendChild(quickFilters);
+        }
+
+        // Hızlı filtre click eventi
+        document.querySelectorAll('.quick-filter').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const filter = this.getAttribute('data-filter');
+                const form = document.getElementById('filterForm');
+
+                // Tüm filtreleri temizle
+                form.querySelectorAll('input, select').forEach(input => {
+                    if (input.type === 'text' || input.type === 'number' || input.type === 'date') {
+                        input.value = '';
+                    } else if (input.tagName === 'SELECT') {
+                        input.selectedIndex = 0;
+                    }
+                });
+
+                // İlgili filtreyi uygula
+                switch (filter) {
+                    case 'online':
+                        form.querySelector('select[name="IsOnline"]').value = 'true';
+                        break;
+                    case 'offline':
+                        form.querySelector('select[name="IsOnline"]').value = 'false';
+                        break;
+                    case 'banned':
+                        form.querySelector('select[name="IsBanned"]').value = 'true';
+                        break;
+                    case 'richest':
+                        form.querySelector('select[name="SortBy"]').value = 'Gold';
+                        form.querySelector('select[name="SortDescending"]').value = 'true';
+                        break;
+                    case 'newest':
+                        form.querySelector('select[name="SortBy"]').value = 'CreatedAt';
+                        form.querySelector('select[name="SortDescending"]').value = 'true';
+                        break;
+                }
+
+                form.submit();
+            });
+        });
+
+        // Sonuç sayısını vurgula
+        const resultCount = @Model.Count();
+        if (resultCount === 0) {
+            document.querySelector('.badge.bg-primary').classList.remove('bg-primary');
+            document.querySelector('.badge').classList.add('bg-danger');
+        }
+
+        // ========== TOPLU İŞLEMLER ==========
+
+        // Select All Checkbox
+        document.getElementById('selectAll')?.addEventListener('change', function () {
+            const checkboxes = document.querySelectorAll('.user-checkbox');
+            checkboxes.forEach(cb => cb.checked = this.checked);
+            updateBulkActionsToolbar();
+        });
+
+        // Individual Checkboxes
+        document.querySelectorAll('.user-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateBulkActionsToolbar);
+        });
+
+        function updateBulkActionsToolbar() {
+            const selected = document.querySelectorAll('.user-checkbox:checked');
+            const count = selected.length;
+            const toolbar = document.getElementById('bulkActionsCard');
+            const countSpan = document.getElementById('selectedCount');
+
+            if (count > 0) {
+                toolbar.style.display = 'block';
+                countSpan.textContent = count;
+            } else {
+                toolbar.style.display = 'none';
+            }
+
+            // Select All checkbox durumunu güncelle
+            const allCheckboxes = document.querySelectorAll('.user-checkbox');
+            const selectAllCb = document.getElementById('selectAll');
+            if (selectAllCb) {
+                selectAllCb.checked = count === allCheckboxes.length && count > 0;
+            }
+        }
+
+        function getSelectedUsers() {
+            const selected = [];
+            document.querySelectorAll('.user-checkbox:checked').forEach(cb => {
+                selected.push({
+                    id: cb.value,
+                    username: cb.getAttribute('data-username'),
+                    email: cb.getAttribute('data-email'),
+                    gold: parseInt(cb.getAttribute('data-gold')),
+                    isBanned: cb.getAttribute('data-isbanned') === 'true'
+                });
+            });
+            return selected;
+        }
+
+        function clearSelection() {
+            document.querySelectorAll('.user-checkbox:checked').forEach(cb => cb.checked = false);
+            document.getElementById('selectAll').checked = false;
+            updateBulkActionsToolbar();
+        }
+
+        // Toplu Gold Ekleme
+        function bulkAddGold() {
+            const selected = getSelectedUsers();
+            if (selected.length === 0) return;
+
+            const amount = prompt(`${selected.length} kullanıcıya ne kadar gold eklemek istiyorsunuz?`, '100');
+            if (!amount || isNaN(amount) || parseInt(amount) <= 0) return;
+
+            if (confirm(`${selected.length} kullanıcıya ${amount} gold eklenecek. Onaylıyor musunuz?`)) {
+                bulkAction('AddGold', selected.map(u => u.id), { amount: parseInt(amount) });
+            }
+        }
+
+        // Toplu Gold Çıkarma
+        function bulkRemoveGold() {
+            const selected = getSelectedUsers();
+            if (selected.length === 0) return;
+
+            const amount = prompt(`${selected.length} kullanıcıdan ne kadar gold çıkarmak istiyorsunuz?`, '100');
+            if (!amount || isNaN(amount) || parseInt(amount) <= 0) return;
+
+            if (confirm(`${selected.length} kullanıcıdan ${amount} gold çıkarılacak. Onaylıyor musunuz?`)) {
+                bulkAction('RemoveGold', selected.map(u => u.id), { amount: parseInt(amount) });
+            }
+        }
+
+        // Toplu Ban
+        function bulkBan() {
+            const selected = getSelectedUsers();
+            if (selected.length === 0) return;
+
+            const reason = prompt(`${selected.length} kullanıcı banlanacak. Ban sebebi:`, 'Toplu ban işlemi');
+            if (!reason) return;
+
+            if (confirm(`${selected.length} kullanıcı banlanacak. Onaylıyor musunuz?`)) {
+                bulkAction('Ban', selected.map(u => u.id), { reason: reason });
+            }
+        }
+
+        // Toplu Unban
+        function bulkUnban() {
+            const selected = getSelectedUsers();
+            if (selected.length === 0) return;
+
+            if (confirm(`${selected.length} kullanıcının banı kaldırılacak. Onaylıyor musunuz?`)) {
+                bulkAction('Unban', selected.map(u => u.id), {});
+            }
+        }
+
+        // Generic Bulk Action
+        function bulkAction(action, userIds, params) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '@Url.Action("BulkAction", "Admin")';
+
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = action;
+            form.appendChild(actionInput);
+
+            userIds.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'userIds';
+                input.value = id;
+                form.appendChild(input);
+            });
+
+            Object.keys(params).forEach(key => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = params[key];
+                form.appendChild(input);
+            });
+
+            // CSRF Token
+            const token = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (token) {
+                form.appendChild(token.cloneNode());
+            }
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        // CSV Export
+        function exportCSV() {
+            const users = @Html.Raw(Json.Serialize(Model.Select(u => new {
+            u.Id,
+            u.Username,
+            u.Email,
+            u.Gold,
+            u.IsOnline,
+            u.IsBanned,
+            CreatedAt = u.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
+            LastSeenAt = u.LastSeenAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""
+            })));
+
+            let csv = 'ID,Username,Email,Gold,IsOnline,IsBanned,CreatedAt,LastSeenAt\n';
+            users.forEach(user => {
+                csv += `"${user.Id}","${user.Username}","${user.Email}",${user.Gold},${user.IsOnline},${user.IsBanned},"${user.CreatedAt}","${user.LastSeenAt}"\n`;
+            });
+
+            downloadFile(csv, 'users_export.csv', 'text/csv');
+        }
+
+        // JSON Export
+        function exportJSON() {
+            const users = @Html.Raw(Json.Serialize(Model.Select(u => new {
+            u.Id,
+            u.Username,
+            u.Email,
+            u.Gold,
+            u.IsOnline,
+            u.IsBanned,
+            u.CreatedAt,
+            u.LastSeenAt
+            })));
+
+            const json = JSON.stringify(users, null, 2);
+            downloadFile(json, 'users_export.json', 'application/json');
+        }
+
+        // Export Seçililer
+        function exportSelected() {
+            const selected = getSelectedUsers();
+            if (selected.length === 0) {
+                alert('Lütfen export etmek için kullanıcı seçin.');
+                return;
+            }
+
+            const json = JSON.stringify(selected, null, 2);
+            downloadFile(json, 'selected_users_export.json', 'application/json');
+        }
+
+        // Download Helper
+        function downloadFile(content, filename, contentType) {
+            const blob = new Blob([content], { type: contentType });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+    </script>
+}

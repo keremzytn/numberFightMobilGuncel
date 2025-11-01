@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Core.Interfaces;
 using Core.Services;
 using API.Filters;
+using API.Models.Filters;
 
 namespace API.Controllers;
 
@@ -112,17 +113,118 @@ public class AdminController : Controller
     }
 
     [AdminAuthorize]
-    public async Task<IActionResult> Users()
+    public async Task<IActionResult> Users([FromQuery] UserFilter filter)
     {
         var users = await _userRepository.GetAllAsync();
-        return View(users.OrderByDescending(u => u.CreatedAt));
+        var query = users.AsQueryable();
+
+        // Arama
+        if (!string.IsNullOrWhiteSpace(filter.SearchQuery))
+        {
+            var searchLower = filter.SearchQuery.ToLower();
+            query = query.Where(u =>
+                u.Username.ToLower().Contains(searchLower) ||
+                u.Email.ToLower().Contains(searchLower) ||
+                u.Id.ToLower().Contains(searchLower));
+        }
+
+        // Online/Offline filtresi
+        if (filter.IsOnline.HasValue)
+        {
+            query = query.Where(u => u.IsOnline == filter.IsOnline.Value);
+        }
+
+        // Ban filtresi
+        if (filter.IsBanned.HasValue)
+        {
+            query = query.Where(u => u.IsBanned == filter.IsBanned.Value);
+        }
+
+        // Tarih filtreleri
+        if (filter.RegisteredAfter.HasValue)
+        {
+            query = query.Where(u => u.CreatedAt >= filter.RegisteredAfter.Value);
+        }
+
+        if (filter.RegisteredBefore.HasValue)
+        {
+            query = query.Where(u => u.CreatedAt <= filter.RegisteredBefore.Value);
+        }
+
+        // Gold filtreleri
+        if (filter.MinGold.HasValue)
+        {
+            query = query.Where(u => u.Gold >= filter.MinGold.Value);
+        }
+
+        if (filter.MaxGold.HasValue)
+        {
+            query = query.Where(u => u.Gold <= filter.MaxGold.Value);
+        }
+
+        // Sıralama
+        query = filter.SortBy?.ToLower() switch
+        {
+            "username" => filter.SortDescending ? query.OrderByDescending(u => u.Username) : query.OrderBy(u => u.Username),
+            "gold" => filter.SortDescending ? query.OrderByDescending(u => u.Gold) : query.OrderBy(u => u.Gold),
+            "lastseenat" => filter.SortDescending ? query.OrderByDescending(u => u.LastSeenAt) : query.OrderBy(u => u.LastSeenAt),
+            _ => filter.SortDescending ? query.OrderByDescending(u => u.CreatedAt) : query.OrderBy(u => u.CreatedAt)
+        };
+
+        ViewBag.Filter = filter;
+        return View(query.ToList());
     }
 
     [AdminAuthorize]
-    public async Task<IActionResult> Games()
+    public async Task<IActionResult> Games([FromQuery] GameFilter filter)
     {
         var games = await _gameRepository.GetAllGamesAsync();
-        return View(games.OrderByDescending(g => g.CreatedAt).Take(100));
+        var query = games.AsQueryable();
+
+        // Oyuncu filtresi
+        if (!string.IsNullOrWhiteSpace(filter.PlayerId))
+        {
+            query = query.Where(g => g.Player1Id == filter.PlayerId || g.Player2Id == filter.PlayerId);
+        }
+
+        // Durum filtresi
+        if (filter.Status.HasValue)
+        {
+            query = query.Where(g => g.Status == filter.Status.Value);
+        }
+
+        // Tarih filtreleri
+        if (filter.StartDate.HasValue)
+        {
+            query = query.Where(g => g.CreatedAt >= filter.StartDate.Value);
+        }
+
+        if (filter.EndDate.HasValue)
+        {
+            query = query.Where(g => g.CreatedAt <= filter.EndDate.Value);
+        }
+
+        // Kazanan filtresi
+        if (!string.IsNullOrWhiteSpace(filter.WinnerId))
+        {
+            query = query.Where(g => g.WinnerId == filter.WinnerId);
+        }
+
+        // Minimum skor filtresi
+        if (filter.MinScore.HasValue)
+        {
+            query = query.Where(g => g.Player1Score >= filter.MinScore.Value || g.Player2Score >= filter.MinScore.Value);
+        }
+
+        // Sıralama
+        query = filter.SortBy?.ToLower() switch
+        {
+            "status" => filter.SortDescending ? query.OrderByDescending(g => g.Status) : query.OrderBy(g => g.Status),
+            _ => filter.SortDescending ? query.OrderByDescending(g => g.CreatedAt) : query.OrderBy(g => g.CreatedAt)
+        };
+
+        ViewBag.Filter = filter;
+        return View(query.Take(100).ToList());
     }
 
     [AdminAuthorize]
@@ -259,6 +361,89 @@ public class AdminController : Controller
 
         TempData["Success"] = "Kullanıcının banı kaldırıldı!";
         return RedirectToAction("UserDetail", new { id = userId });
+    }
+
+    [HttpPost]
+    [AdminAuthorize]
+    public async Task<IActionResult> BulkAction(string action, List<string> userIds, int? amount, string? reason)
+    {
+        if (userIds == null || !userIds.Any())
+        {
+            TempData["Error"] = "Hiç kullanıcı seçilmedi!";
+            return RedirectToAction("Users");
+        }
+
+        int successCount = 0;
+        int failCount = 0;
+
+        foreach (var userId in userIds)
+        {
+            try
+            {
+                var user = await _userRepository.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    failCount++;
+                    continue;
+                }
+
+                switch (action?.ToLower())
+                {
+                    case "addgold":
+                        if (amount.HasValue && amount.Value > 0)
+                        {
+                            user.AddGold(amount.Value);
+                            await _userRepository.UpdateAsync(user);
+                            successCount++;
+                        }
+                        break;
+
+                    case "removegold":
+                        if (amount.HasValue && amount.Value > 0)
+                        {
+                            user.RemoveGold(amount.Value);
+                            await _userRepository.UpdateAsync(user);
+                            successCount++;
+                        }
+                        break;
+
+                    case "ban":
+                        if (!string.IsNullOrWhiteSpace(reason))
+                        {
+                            user.Ban(reason, null);
+                            await _userRepository.UpdateAsync(user);
+                            successCount++;
+                        }
+                        break;
+
+                    case "unban":
+                        user.Unban();
+                        await _userRepository.UpdateAsync(user);
+                        successCount++;
+                        break;
+
+                    default:
+                        failCount++;
+                        break;
+                }
+            }
+            catch (Exception)
+            {
+                failCount++;
+            }
+        }
+
+        if (successCount > 0)
+        {
+            TempData["Success"] = $"İşlem başarılı! {successCount} kullanıcı güncellendi.";
+        }
+
+        if (failCount > 0)
+        {
+            TempData["Warning"] = $"{failCount} kullanıcı için işlem başarısız oldu.";
+        }
+
+        return RedirectToAction("Users");
     }
 }
 

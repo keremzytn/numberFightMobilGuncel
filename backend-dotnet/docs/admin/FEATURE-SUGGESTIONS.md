@@ -473,4 +473,3 @@ En hızlı ve en etkili özellikler:
 **Hazırlayan:** AI Assistant  
 **Tarih:** 1 Kasım 2024  
 **Versiyon:** 1.0.0
-
