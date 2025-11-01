@@ -1,0 +1,29 @@
+# Netlify Configuration - Sadece Frontend Web Build için
+# Backend .NET API Netlify'da çalışmaz!
+
+[build]
+  command = "npx expo export:web"
+  publish = "web-build"
+  
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA routing için tüm istekleri index.html'e yönlendir
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# API isteklerini Railway backend'e proxy et (opsiyonel)
+# [[redirects]]
+#   from = "/api/*"
+#   to = "https://your-railway-backend.up.railway.app/api/:splat"
+#   status = 200
+#   force = true
+
+# [[redirects]]
+#   from = "/gameHub/*"
+#   to = "https://your-railway-backend.up.railway.app/gameHub/:splat"
+#   status = 200
+#   force = true
+

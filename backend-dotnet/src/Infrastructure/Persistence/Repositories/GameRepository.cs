@@ -38,6 +38,14 @@ public class GameRepository : IGameRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Game>> GetAllGamesAsync()
+    {
+        return await _context.Games
+            .Include(g => g.Moves)
+            .OrderByDescending(g => g.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task<Game> AddAsync(Game game)
     {
         await _context.Games.AddAsync(game);

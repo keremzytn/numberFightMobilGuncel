@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - NumberFight Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            background-color: #212529;
+        }
+
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: .5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .sidebar .nav-link {
+            font-weight: 500;
+            color: #adb5bd;
+            padding: 0.75rem 1rem;
+        }
+
+        .sidebar .nav-link:hover {
+            color: #fff;
+            background-color: #495057;
+        }
+
+        .sidebar .nav-link.active {
+            color: #fff;
+            background-color: #0d6efd;
+        }
+
+        .sidebar .nav-link i {
+            margin-right: 0.5rem;
+        }
+
+        main {
+            margin-left: 240px;
+            padding-top: 48px;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: 240px;
+            z-index: 1030;
+        }
+
+        .card {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            border: none;
+        }
+
+        .stat-card {
+            border-left: 3px solid;
+        }
+
+        .stat-card.primary {
+            border-color: #0d6efd;
+        }
+
+        .stat-card.success {
+            border-color: #198754;
+        }
+
+        .stat-card.warning {
+            border-color: #ffc107;
+        }
+
+        .stat-card.danger {
+            border-color: #dc3545;
+        }
+
+        .badge-status {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        @@media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            main,
+            .navbar {
+                margin-left: 0;
+                left: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-bar-chart-fill"></i> NumberFight Admin Panel
+            </span>
+            <div class="d-flex align-items-center">
+                <span class="text-white me-3">
+                    <i class="bi bi-person-circle"></i> @Context.Session.GetString("AdminUsername")
+                </span>
+                <span class="text-white me-3">
+                    <i class="bi bi-clock"></i> @DateTime.Now.ToString("dd MMMM yyyy HH:mm")
+                </span>
+                <form method="post" asp-controller="Admin" asp-action="Logout" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-light">
+                        <i class="bi bi-box-arrow-right"></i> Çıkış
+                    </button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-2 d-md-block sidebar">
+                <div class="sidebar-sticky">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active" : "")"
+                                asp-controller="Admin" asp-action="Dashboard">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Users" ? "active" : "")"
+                                asp-controller="Admin" asp-action="Users">
+                                <i class="bi bi-people-fill"></i> Kullanıcılar
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "ActiveGames" ? "active" : "")"
+                                asp-controller="Admin" asp-action="ActiveGames">
+                                <i class="bi bi-joystick"></i> Aktif Oyunlar
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Games" ? "active" : "")"
+                                asp-controller="Admin" asp-action="Games">
+                                <i class="bi bi-trophy-fill"></i> Tüm Oyunlar
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Friends" ? "active" : "")"
+                                asp-controller="Admin" asp-action="Friends">
+                                <i class="bi bi-person-hearts"></i> Arkadaşlıklar
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+
+</html>
+

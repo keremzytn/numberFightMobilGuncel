@@ -1,0 +1,375 @@
+@model UserDetailViewModel
+@{
+    ViewData["Title"] = $"Kullanıcı Detay - {Model.User.Username}";
+}
+
+<div class="py-4">
+    <div class="mb-4 d-flex justify-content-between align-items-center">
+        <a asp-controller="Admin" asp-action="Users" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Geri
+        </a>
+        <h2>@Model.User.Username - Kullanıcı Yönetimi</h2>
+        <div></div>
+    </div>
+
+    @* Success/Error Messages *@
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-person-circle"></i> Kullanıcı Bilgileri</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <i class="bi bi-person-circle" style="font-size: 5rem;"></i>
+                        <h4 class="mt-2">@Model.User.Username</h4>
+                        @if (Model.User.IsOnline)
+                        {
+                            <span class="badge bg-success"><i class="bi bi-circle-fill"></i> Online</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary"><i class="bi bi-circle"></i> Offline</span>
+                        }
+                        
+                        @if (Model.User.IsBanned)
+                        {
+                            <span class="badge bg-danger ms-2"><i class="bi bi-ban"></i> Banlı</span>
+                        }
+                    </div>
+                    <hr>
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td><strong>Email:</strong></td>
+                                <td>@Model.User.Email</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Kayıt Tarihi:</strong></td>
+                                <td>@Model.User.CreatedAt.ToString("dd.MM.yyyy")</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Gold:</strong></td>
+                                <td><span class="badge bg-warning"><i class="bi bi-coin"></i> @Model.User.Gold</span></td>
+                            </tr>
+                            @if (Model.User.IsBanned)
+                            {
+                                <tr>
+                                    <td><strong>Ban Tarihi:</strong></td>
+                                    <td>@Model.User.BannedAt?.ToString("dd.MM.yyyy HH:mm")</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Ban Sebebi:</strong></td>
+                                    <td><span class="text-danger">@Model.User.BanReason</span></td>
+                                </tr>
+                                @if (Model.User.BannedUntil.HasValue)
+                                {
+                                    <tr>
+                                        <td><strong>Ban Bitiş:</strong></td>
+                                        <td>@Model.User.BannedUntil?.ToString("dd.MM.yyyy HH:mm")</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            @* Admin Actions Card *@
+            <div class="card mt-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-tools"></i> Yönetim İşlemleri</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addGoldModal">
+                            <i class="bi bi-plus-circle"></i> Gold Ekle
+                        </button>
+                        <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#removeGoldModal">
+                            <i class="bi bi-dash-circle"></i> Gold Çıkar
+                        </button>
+                        <hr>
+                        @if (Model.User.IsBanned)
+                        {
+                            <form method="post" asp-action="UnbanUser" onsubmit="return confirm('Bu kullanıcının banını kaldırmak istediğinizden emin misiniz?');">
+                                <input type="hidden" name="userId" value="@Model.User.Id" />
+                                <button type="submit" class="btn btn-info w-100">
+                                    <i class="bi bi-check-circle"></i> Banı Kaldır
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#banModal">
+                                <i class="bi bi-ban"></i> Kullanıcıyı Banla
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            @if (Model.Stats != null)
+            {
+                <div class="card mt-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-graph-up"></i> İstatistikler</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="text-muted small">Toplam Oyun</label>
+                            <h4>@Model.Stats.TotalGames</h4>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-muted small">Kazanma Oranı</label>
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: @Model.Stats.WinRate%" 
+                                     aria-valuenow="@Model.Stats.WinRate" aria-valuemin="0" aria-valuemax="100">
+                                    @Model.Stats.WinRate.ToString("F1")%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="card bg-success text-white">
+                                    <div class="card-body p-2">
+                                        <h5>@Model.Stats.Wins</h5>
+                                        <small>Galibiyet</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="card bg-danger text-white">
+                                    <div class="card-body p-2">
+                                        <h5>@Model.Stats.Losses</h5>
+                                        <small>Mağlubiyet</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="card bg-warning text-white">
+                                    <div class="card-body p-2">
+                                        <h5>@Model.Stats.Draws</h5>
+                                        <small>Beraberlik</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-trophy-fill"></i> Oyun Geçmişi</h5>
+                </div>
+                <div class="card-body">
+                    @if (!Model.Games.Any())
+                    {
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Bu kullanıcının henüz oynadığı oyun bulunmuyor.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Tarih</th>
+                                        <th>Skor</th>
+                                        <th>Durum</th>
+                                        <th>Sonuç</th>
+                                        <th>İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var game in Model.Games)
+                                    {
+                                        var isPlayer1 = game.Player1Id == Model.User.Id;
+                                        var userScore = isPlayer1 ? game.Player1Score : game.Player2Score;
+                                        var opponentScore = isPlayer1 ? game.Player2Score : game.Player1Score;
+                                        var isWinner = game.WinnerId == Model.User.Id;
+                                        
+                                        <tr>
+                                            <td>@game.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                                            <td><strong>@userScore - @opponentScore</strong></td>
+                                            <td>
+                                                @switch (game.Status)
+                                                {
+                                                    case GameStatus.Waiting:
+                                                        <span class="badge bg-warning">Bekliyor</span>
+                                                        break;
+                                                    case GameStatus.InProgress:
+                                                        <span class="badge bg-success">Devam Ediyor</span>
+                                                        break;
+                                                    case GameStatus.Completed:
+                                                        <span class="badge bg-secondary">Tamamlandı</span>
+                                                        break;
+                                                    case GameStatus.Cancelled:
+                                                        <span class="badge bg-danger">İptal</span>
+                                                        break;
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (game.Status == GameStatus.Completed)
+                                                {
+                                                    if (isWinner)
+                                                    {
+                                                        <span class="badge bg-success">
+                                                            <i class="bi bi-trophy-fill"></i> Kazandı
+                                                        </span>
+                                                    }
+                                                    else if (game.WinnerId == null)
+                                                    {
+                                                        <span class="badge bg-warning">Berabere</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-danger">Kaybetti</span>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <a asp-controller="Admin" asp-action="GameDetail" asp-route-id="@game.Id" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Add Gold Modal *@
+<div class="modal fade" id="addGoldModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-action="AddGold">
+                <input type="hidden" name="userId" value="@Model.User.Id" />
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Gold Ekle</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Eklenecek Gold Miktarı</label>
+                        <input type="number" name="amount" class="form-control" min="1" max="10000" value="100" required>
+                        <div class="form-text">Maksimum 10,000 gold ekleyebilirsiniz.</div>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Mevcut Gold: <strong>@Model.User.Gold</strong>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> Gold Ekle
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* Remove Gold Modal *@
+<div class="modal fade" id="removeGoldModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-action="RemoveGold">
+                <input type="hidden" name="userId" value="@Model.User.Id" />
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="bi bi-dash-circle"></i> Gold Çıkar</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Çıkarılacak Gold Miktarı</label>
+                        <input type="number" name="amount" class="form-control" min="1" max="@Model.User.Gold" value="100" required>
+                        <div class="form-text">Maksimum @Model.User.Gold gold çıkarabilirsiniz.</div>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> Mevcut Gold: <strong>@Model.User.Gold</strong>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-check-circle"></i> Gold Çıkar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* Ban Modal *@
+<div class="modal fade" id="banModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-action="BanUser">
+                <input type="hidden" name="userId" value="@Model.User.Id" />
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-ban"></i> Kullanıcıyı Banla</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Ban Sebebi</label>
+                        <textarea name="reason" class="form-control" rows="3" required placeholder="Neden banlandığını açıklayın..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ban Süresi</label>
+                        <select name="durationDays" class="form-select">
+                            <option value="">Kalıcı Ban</option>
+                            <option value="1">1 Gün</option>
+                            <option value="3">3 Gün</option>
+                            <option value="7">7 Gün</option>
+                            <option value="14">14 Gün</option>
+                            <option value="30">30 Gün</option>
+                        </select>
+                        <div class="form-text">Boş bırakırsanız kalıcı ban olur.</div>
+                    </div>
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle-fill"></i> 
+                        <strong>Dikkat!</strong> Bu kullanıcı banlandığında giriş yapamayacak.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-ban"></i> Banla
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

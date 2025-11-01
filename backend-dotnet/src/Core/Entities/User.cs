@@ -15,10 +15,18 @@ public class User : BaseEntity
     public string PasswordHash { get; private set; }
 
     public int Gold { get; private set; }
-    
+
     public bool IsOnline { get; private set; }
-    
+
     public DateTime? LastSeenAt { get; private set; }
+
+    public bool IsBanned { get; private set; }
+
+    public DateTime? BannedAt { get; private set; }
+
+    public string? BanReason { get; private set; }
+
+    public DateTime? BannedUntil { get; private set; }
 
     // Navigation properties for friendships
     public virtual ICollection<Friend> SentFriendRequests { get; private set; } = new List<Friend>();
@@ -57,5 +65,32 @@ public class User : BaseEntity
         {
             LastSeenAt = DateTime.UtcNow;
         }
+    }
+
+    public void Ban(string reason, DateTime? until = null)
+    {
+        IsBanned = true;
+        BannedAt = DateTime.UtcNow;
+        BanReason = reason;
+        BannedUntil = until;
+    }
+
+    public void Unban()
+    {
+        IsBanned = false;
+        BannedAt = null;
+        BanReason = null;
+        BannedUntil = null;
+    }
+
+    public bool IsCurrentlyBanned()
+    {
+        if (!IsBanned) return false;
+        if (BannedUntil.HasValue && BannedUntil.Value < DateTime.UtcNow)
+        {
+            Unban();
+            return false;
+        }
+        return true;
     }
 }

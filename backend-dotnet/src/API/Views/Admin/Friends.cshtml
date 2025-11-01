@@ -1,0 +1,97 @@
+@model IEnumerable<Friend>
+@{
+    ViewData["Title"] = "Arkadaşlıklar";
+    var acceptedCount = Model.Count(f => f.Status == FriendshipStatus.Accepted);
+    var pendingCount = Model.Count(f => f.Status == FriendshipStatus.Pending);
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-person-hearts"></i> Arkadaşlık İlişkileri</h1>
+        <div>
+            <span class="badge bg-success fs-6">Kabul Edilen: @acceptedCount</span>
+            <span class="badge bg-warning fs-6">Bekleyen: @pendingCount</span>
+            <span class="badge bg-primary fs-6">Toplam: @Model.Count()</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Kullanıcı</th>
+                            <th>Arkadaş</th>
+                            <th>Durum</th>
+                            <th>İstek Tarihi</th>
+                            <th>Kabul Tarihi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var friend in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-person-circle fs-4 me-2"></i>
+                                        <div>
+                                            <strong>@friend.User.Username</strong><br>
+                                            <small class="text-muted">@friend.User.Email</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-person-circle fs-4 me-2"></i>
+                                        <div>
+                                            <strong>@friend.FriendUser.Username</strong><br>
+                                            <small class="text-muted">@friend.FriendUser.Email</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @switch (friend.Status)
+                                    {
+                                        case FriendshipStatus.Pending:
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-hourglass-split"></i> Beklemede
+                                            </span>
+                                            break;
+                                        case FriendshipStatus.Accepted:
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> Kabul Edildi
+                                            </span>
+                                            break;
+                                        case FriendshipStatus.Declined:
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-x-circle"></i> Reddedildi
+                                            </span>
+                                            break;
+                                        case FriendshipStatus.Blocked:
+                                            <span class="badge bg-dark">
+                                                <i class="bi bi-slash-circle"></i> Engellendi
+                                            </span>
+                                            break;
+                                    }
+                                </td>
+                                <td>@friend.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td>
+                                    @if (friend.AcceptedAt.HasValue)
+                                    {
+                                        @friend.AcceptedAt.Value.ToString("dd.MM.yyyy HH:mm")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+

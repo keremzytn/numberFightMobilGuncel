@@ -33,6 +33,19 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, LoginRe
         if (!isPasswordValid)
             throw new UnauthorizedAccessException("Geçersiz şifre");
 
+        // Ban kontrolü
+        if (user.IsCurrentlyBanned())
+        {
+            var banMessage = user.BannedUntil.HasValue
+                ? $"Hesabınız {user.BannedUntil.Value:dd.MM.yyyy HH:mm} tarihine kadar banlandı. Sebep: {user.BanReason}"
+                : $"Hesabınız kalıcı olarak banlandı. Sebep: {user.BanReason}";
+            throw new UnauthorizedAccessException(banMessage);
+        }
+
+        // Online durumu güncelle
+        user.SetOnlineStatus(true);
+        await _userRepository.UpdateAsync(user);
+
         return new LoginResponse
         {
             Token = _jwtTokenGenerator.GenerateToken(user),

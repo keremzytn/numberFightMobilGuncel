@@ -1,0 +1,549 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="py-4">
+    <h1 class="mb-4"><i class="bi bi-speedometer2"></i> Dashboard</h1>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Toplam Kullanıcı</h6>
+                            <h2 class="card-title mb-0">@Model.TotalUsers</h2>
+                            <small class="text-success">
+                                <i class="bi bi-circle-fill"></i> @Model.OnlineUsers Online
+                            </small>
+                        </div>
+                        <div class="text-primary">
+                            <i class="bi bi-people-fill" style="font-size: 3rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card stat-card success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Aktif Oyunlar</h6>
+                            <h2 class="card-title mb-0">@Model.ActiveGames</h2>
+                            <small class="text-muted">Şu anda devam ediyor</small>
+                        </div>
+                        <div class="text-success">
+                            <i class="bi bi-joystick" style="font-size: 3rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card stat-card warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Tamamlanan Oyunlar</h6>
+                            <h2 class="card-title mb-0">@Model.CompletedGames</h2>
+                            <small class="text-muted">Toplam biten oyunlar</small>
+                        </div>
+                        <div class="text-warning">
+                            <i class="bi bi-trophy-fill" style="font-size: 3rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card stat-card danger">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Toplam Oyun</h6>
+                            <h2 class="card-title mb-0">@Model.TotalGames</h2>
+                            <small class="text-danger">
+                                <i class="bi bi-ban"></i> @Model.BannedUsers Banlı
+                            </small>
+                        </div>
+                        <div class="text-danger">
+                            <i class="bi bi-graph-up" style="font-size: 3rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Grafikler *@
+    <div class="row g-4 mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart-fill"></i> Son 7 Günün Oyun İstatistikleri</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="gamesChart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart-fill"></i> Kullanıcı Durumu</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="usersChart"></canvas>
+                    <div class="mt-3 text-center">
+                        <div class="d-flex justify-content-around">
+                            <div>
+                                <span class="badge bg-success">Online: @Model.OnlineUsers</span>
+                            </div>
+                            <div>
+                                <span class="badge bg-secondary">Offline: @Model.OfflineUsers</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-graph-up-arrow"></i> Oyun Durum Dağılımı</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="gameStatusChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-activity"></i> Hızlı Erişim</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <a asp-controller="Admin" asp-action="Users" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-people-fill text-primary"></i> Kullanıcıları Görüntüle
+                                </div>
+                                <span class="badge bg-primary rounded-pill">@Model.TotalUsers</span>
+                            </div>
+                        </a>
+                        <a asp-controller="Admin" asp-action="ActiveGames"
+                            class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-joystick text-success"></i> Aktif Oyunları İzle
+                                </div>
+                                <span class="badge bg-success rounded-pill">@Model.ActiveGames</span>
+                            </div>
+                        </a>
+                        <a asp-controller="Admin" asp-action="Games" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-trophy-fill text-warning"></i> Oyun Geçmişi
+                                </div>
+                                <span class="badge bg-warning rounded-pill">@Model.TotalGames</span>
+                            </div>
+                        </a>
+                        <a asp-controller="Admin" asp-action="Friends" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-person-hearts text-danger"></i> Arkadaşlık İlişkileri
+                                </div>
+                                <span class="badge bg-secondary rounded-pill"><i class="bi bi-arrow-right"></i></span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <hr>
+
+                    <div class="row g-2 mt-2">
+                        <div class="col-6">
+                            <div class="card bg-light">
+                                <div class="card-body text-center p-2">
+                                    <h6 class="mb-1">@Model.OnlineUsers</h6>
+                                    <small class="text-muted">Online</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card bg-light">
+                                <div class="card-body text-center p-2">
+                                    <h6 class="mb-1 text-danger">@Model.BannedUsers</h6>
+                                    <small class="text-muted">Banlı</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Sistem Bilgileri</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td><strong><i class="bi bi-clock"></i> Sunucu Zamanı:</strong></td>
+                                        <td>@DateTime.Now.ToString("dd MMMM yyyy HH:mm:ss")</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong><i class="bi bi-calendar"></i> Sistem:</strong></td>
+                                        <td>NumberFight Backend API v1.0</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong><i class="bi bi-database"></i> Veritabanı:</strong></td>
+                                        <td>PostgreSQL</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong><i class="bi bi-cpu"></i> Framework:</strong></td>
+                                        <td>.NET 9.0</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-info mb-0">
+                                <h6><i class="bi bi-info-circle-fill"></i> İstatistik Özeti</h6>
+                                <ul class="mb-0">
+                                    <li>Toplam <strong>@Model.TotalUsers</strong> kullanıcı</li>
+                                    <li><strong>@Model.OnlineUsers</strong> kullanıcı şu anda online</li>
+                                    <li><strong>@Model.ActiveGames</strong> oyun devam ediyor</li>
+                                    <li><strong>@Model.CompletedGames</strong> oyun tamamlandı</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // SignalR Connection
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/adminHub")
+            .withAutomaticReconnect()
+            .build();
+
+        let isConnected = false;
+
+        // Bağlantıyı başlat
+        connection.start()
+            .then(() => {
+                console.log("✅ Admin Hub'a bağlanıldı");
+                isConnected = true;
+                updateConnectionStatus(true);
+            })
+            .catch(err => {
+                console.error("❌ Admin Hub bağlantı hatası:", err);
+                isConnected = false;
+                updateConnectionStatus(false);
+            });
+
+        // Yeniden bağlantı olayları
+        connection.onreconnecting(() => {
+            console.log("🔄 Yeniden bağlanılıyor...");
+            updateConnectionStatus(false);
+        });
+
+        connection.onreconnected(() => {
+            console.log("✅ Yeniden bağlanıldı");
+            updateConnectionStatus(true);
+        });
+
+        connection.onclose(() => {
+            console.log("❌ Bağlantı kesildi");
+            isConnected = false;
+            updateConnectionStatus(false);
+        });
+
+        function updateConnectionStatus(connected) {
+            // Status göstergesi eklenebilir
+            if (connected) {
+                console.log("🟢 Gerçek zamanlı güncelleme aktif");
+            } else {
+                console.log("🔴 Gerçek zamanlı güncelleme devre dışı");
+            }
+        }
+
+        // Chart.js Global Ayarlar
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#6c757d';
+
+        // Son 7 Günün Oyun İstatistikleri - Line Chart
+        const gamesCtx = document.getElementById('gamesChart').getContext('2d');
+        const gamesChart = new Chart(gamesCtx, {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(Json.Serialize(Model.Last7DaysLabels)),
+                datasets: [{
+                    label: 'Oyun Sayısı',
+                    data: @Html.Raw(Json.Serialize(Model.Last7DaysGameCounts)),
+                    borderColor: 'rgb(13, 110, 253)',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: 'rgb(13, 110, 253)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyFont: { size: 13 },
+                        cornerRadius: 8
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            font: { size: 12 }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: { size: 12 }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+
+        // Kullanıcı Durumu - Donut Chart
+        const usersCtx = document.getElementById('usersChart').getContext('2d');
+        const usersChart = new Chart(usersCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Online', 'Offline'],
+                datasets: [{
+                    data: [@Model.OnlineUsers, @Model.OfflineUsers],
+                    backgroundColor: [
+                        'rgba(25, 135, 84, 0.8)',
+                        'rgba(108, 117, 125, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgb(25, 135, 84)',
+                        'rgb(108, 117, 125)'
+                    ],
+                    borderWidth: 2,
+                    hoverOffset: 15
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            font: { size: 13 },
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        cornerRadius: 8
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+
+        // Oyun Durum Dağılımı - Bar Chart
+        const gameStatusCtx = document.getElementById('gameStatusChart').getContext('2d');
+        const gameStatusChart = new Chart(gameStatusCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Bekliyor', 'Devam Ediyor', 'Tamamlandı', 'İptal'],
+                datasets: [{
+                    label: 'Oyun Sayısı',
+                    data: [
+        @Model.WaitingGames,
+        @Model.InProgressGames,
+        @Model.CompletedGamesCount,
+        @Model.CancelledGames
+                                ],
+                    backgroundColor: [
+                        'rgba(255, 193, 7, 0.8)',
+                        'rgba(25, 135, 84, 0.8)',
+                        'rgba(108, 117, 125, 0.8)',
+                        'rgba(220, 53, 69, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgb(255, 193, 7)',
+                        'rgb(25, 135, 84)',
+                        'rgb(108, 117, 125)',
+                        'rgb(220, 53, 69)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        cornerRadius: 8
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            font: { size: 12 }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: { size: 12 }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+
+        // SignalR'dan gelen istatistikleri dinle ve grafikleri güncelle
+        connection.on("ReceiveStats", (stats) => {
+            console.log("📊 Yeni istatistikler alındı:", stats);
+
+            // İstatistik kartlarını güncelle
+            updateStatCard('totalUsers', stats.totalUsers);
+            updateStatCard('onlineUsers', stats.onlineUsers);
+            updateStatCard('activeGames', stats.activeGames);
+            updateStatCard('completedGames', stats.completedGames);
+            updateStatCard('totalGames', stats.totalGames);
+            updateStatCard('bannedUsers', stats.bannedUsers);
+
+            // Line Chart Güncelle (Son 7 Gün)
+            gamesChart.data.labels = stats.last7DaysLabels;
+            gamesChart.data.datasets[0].data = stats.last7DaysGameCounts;
+            gamesChart.update('none'); // Animasyonsuz güncelleme
+
+            // Donut Chart Güncelle (Online/Offline)
+            usersChart.data.datasets[0].data = [stats.onlineUsers, stats.offlineUsers];
+            usersChart.update('none');
+
+            // Bar Chart Güncelle (Oyun Durum Dağılımı)
+            gameStatusChart.data.datasets[0].data = [
+                stats.waitingGames,
+                stats.inProgressGames,
+                stats.completedGamesCount,
+                stats.cancelledGames
+            ];
+            gameStatusChart.update('none');
+
+            // Son güncelleme zamanını göster
+            const updateTime = new Date(stats.updatedAt).toLocaleTimeString('tr-TR');
+            console.log(`✅ Grafikler güncellendi - ${updateTime}`);
+        });
+
+        function updateStatCard(id, value) {
+            // Sayıları güncelle (animasyonlu)
+            const elements = {
+                'totalUsers': document.querySelector('.stat-card.primary h2'),
+                'onlineUsers': document.querySelector('.stat-card.primary .text-success'),
+                'activeGames': document.querySelector('.stat-card.success h2'),
+                'completedGames': document.querySelector('.stat-card.warning h2'),
+                'totalGames': document.querySelector('.stat-card.danger h2'),
+                'bannedUsers': document.querySelector('.stat-card.danger .text-danger')
+            };
+
+            const element = elements[id];
+            if (element) {
+                const currentValue = parseInt(element.textContent.match(/\d+/)?.[0] || '0');
+                if (currentValue !== value) {
+                    // Değer değiştiyse hafif bir animasyon ekle
+                    element.style.transition = 'transform 0.3s ease';
+                    element.style.transform = 'scale(1.1)';
+
+                    if (id === 'onlineUsers') {
+                        element.innerHTML = `<i class="bi bi-circle-fill"></i> ${value} Online`;
+                    } else if (id === 'bannedUsers') {
+                        element.innerHTML = `<i class="bi bi-ban"></i> ${value} Banlı`;
+                    } else {
+                        element.textContent = value;
+                    }
+
+                    setTimeout(() => {
+                        element.style.transform = 'scale(1)';
+                    }, 300);
+                }
+            }
+        }
+
+        // Manuel güncelleme butonu (opsiyonel)
+        function requestUpdate() {
+            if (isConnected) {
+                connection.invoke("RequestStatsUpdate")
+                    .catch(err => console.error("İstatistik güncelleme hatası:", err));
+            }
+        }
+
+        // Sayfa kapatılırken bağlantıyı kapat
+        window.addEventListener('beforeunload', () => {
+            if (isConnected) {
+                connection.stop();
+            }
+        });
+    </script>
+}

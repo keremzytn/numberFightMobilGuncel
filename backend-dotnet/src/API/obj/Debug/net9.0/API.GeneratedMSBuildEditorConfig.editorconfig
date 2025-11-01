@@ -27,3 +27,47 @@ build_property.MSBuildProjectDirectory = /Users/kerem/Documents/GitHub/numberFig
 build_property._RazorSourceGeneratorDebug = 
 build_property.EffectiveAnalysisLevelStyle = 9.0
 build_property.EnableCodeStyleSeverity = 
+
+[/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/ActiveGames.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWRtaW4vQWN0aXZlR2FtZXMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/Dashboard.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWRtaW4vRGFzaGJvYXJkLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/Friends.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWRtaW4vRnJpZW5kcy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/GameDetail.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWRtaW4vR2FtZURldGFpbC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/Games.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWRtaW4vR2FtZXMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/Login.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWRtaW4vTG9naW4uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/UserDetail.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWRtaW4vVXNlckRldGFpbC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/Users.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWRtaW4vVXNlcnMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Shared/_Layout.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU2hhcmVkL19MYXlvdXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/_ViewImports.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvX1ZpZXdJbXBvcnRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/_ViewStart.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvX1ZpZXdTdGFydC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 

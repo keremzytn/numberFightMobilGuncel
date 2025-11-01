@@ -1,0 +1,16 @@
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/bin/Release/net9.0/Application.deps.json
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/bin/Release/net9.0/Application.dll
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/bin/Release/net9.0/Application.pdb
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/bin/Release/net9.0/Core.dll
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/bin/Release/net9.0/Core.pdb
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/obj/Release/net9.0/Application.csproj.AssemblyReference.cache
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/obj/Release/net9.0/Application.GeneratedMSBuildEditorConfig.editorconfig
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/obj/Release/net9.0/Application.AssemblyInfoInputs.cache
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/obj/Release/net9.0/Application.AssemblyInfo.cs
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/obj/Release/net9.0/Application.csproj.CoreCompileInputs.cache
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/obj/Release/net9.0/Application.sourcelink.json
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/obj/Release/net9.0/Applicat.44B5EDA2.Up2Date
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/obj/Release/net9.0/Application.dll
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/obj/Release/net9.0/refint/Application.dll
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/obj/Release/net9.0/Application.pdb
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/Application/obj/Release/net9.0/ref/Application.dll

@@ -26,7 +26,7 @@ public class FriendRepository : IFriendRepository
         return await _context.Friends
             .Include(f => f.User)
             .Include(f => f.FriendUser)
-            .FirstOrDefaultAsync(f => 
+            .FirstOrDefaultAsync(f =>
                 (f.UserId == userId && f.FriendUserId == friendUserId) ||
                 (f.UserId == friendUserId && f.FriendUserId == userId));
     }
@@ -67,7 +67,7 @@ public class FriendRepository : IFriendRepository
     public async Task<bool> AreFriendsAsync(string userId, string friendUserId)
     {
         return await _context.Friends
-            .AnyAsync(f => 
+            .AnyAsync(f =>
                 ((f.UserId == userId && f.FriendUserId == friendUserId) ||
                  (f.UserId == friendUserId && f.FriendUserId == userId)) &&
                 f.Status == FriendshipStatus.Accepted);
@@ -77,6 +77,15 @@ public class FriendRepository : IFriendRepository
     {
         return await _context.Friends
             .AnyAsync(f => f.UserId == fromUserId && f.FriendUserId == toUserId && f.Status == FriendshipStatus.Pending);
+    }
+
+    public async Task<IEnumerable<Friend>> GetAllFriendshipsAsync()
+    {
+        return await _context.Friends
+            .Include(f => f.User)
+            .Include(f => f.FriendUser)
+            .OrderByDescending(f => f.CreatedAt)
+            .ToListAsync();
     }
 
     public async Task AddAsync(Friend friend)
@@ -100,7 +109,7 @@ public class FriendRepository : IFriendRepository
     public async Task<List<User>> GetOnlineFriendsAsync(string userId)
     {
         return await _context.Friends
-            .Where(f => 
+            .Where(f =>
                 ((f.UserId == userId || f.FriendUserId == userId) && f.Status == FriendshipStatus.Accepted))
             .Select(f => f.UserId == userId ? f.FriendUser : f.User)
             .Where(u => u.IsOnline)
@@ -110,7 +119,7 @@ public class FriendRepository : IFriendRepository
     public async Task<List<User>> SearchUsersAsync(string searchTerm, string currentUserId)
     {
         return await _context.Users
-            .Where(u => u.Id != currentUserId && 
+            .Where(u => u.Id != currentUserId &&
                        (u.Username.Contains(searchTerm) || u.Email.Contains(searchTerm)))
             .Take(20)
             .ToListAsync();

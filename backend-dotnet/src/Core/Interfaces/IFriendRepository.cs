@@ -11,6 +11,7 @@ public interface IFriendRepository
     Task<List<Friend>> GetSentRequestsAsync(string userId);
     Task<bool> AreFriendsAsync(string userId, string friendUserId);
     Task<bool> HasPendingRequestAsync(string fromUserId, string toUserId);
+    Task<IEnumerable<Friend>> GetAllFriendshipsAsync();
     Task AddAsync(Friend friend);
     Task UpdateAsync(Friend friend);
     Task DeleteAsync(Friend friend);

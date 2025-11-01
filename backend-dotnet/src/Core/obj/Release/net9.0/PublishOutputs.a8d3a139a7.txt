@@ -1,0 +1,13 @@
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/publish/Core.dll
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/publish/Core.deps.json
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/publish/Core.pdb
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/publish/Microsoft.EntityFrameworkCore.dll
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/publish/Microsoft.EntityFrameworkCore.Abstractions.dll
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/publish/Microsoft.Extensions.Caching.Abstractions.dll
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/publish/Microsoft.Extensions.Caching.Memory.dll
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/publish/Microsoft.Extensions.DependencyInjection.dll
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/publish/Microsoft.Extensions.DependencyInjection.Abstractions.dll
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/publish/Microsoft.Extensions.Logging.dll
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/publish/Microsoft.Extensions.Logging.Abstractions.dll
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/publish/Microsoft.Extensions.Options.dll
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/publish/Microsoft.Extensions.Primitives.dll

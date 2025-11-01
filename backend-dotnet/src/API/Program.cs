@@ -16,12 +16,25 @@ using Core.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure Kestrel to listen on all IP addresses
-builder.WebHost.UseUrls("http://*:5227");
+// Railway, Render gibi platformlar PORT environment variable kullanır
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5227";
+builder.WebHost.UseUrls($"http://*:{port}");
 
 // Add services to the container.
 builder.Services.AddControllers();
+builder.Services.AddControllersWithViews(); // MVC Views için
+builder.Services.AddRazorPages(); // Razor Pages için
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Add Session for Admin Authentication
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromHours(2);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.Name = ".NumberFight.AdminSession";
+});
 
 // Add Infrastructure
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -86,6 +99,7 @@ builder.Services.AddSignalR();
 
 // Add Background Services
 builder.Services.AddHostedService<GameTimeoutService>();
+builder.Services.AddHostedService<AdminStatsBackgroundService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -150,13 +164,19 @@ if (app.Environment.IsDevelopment())
 
 app.UseExceptionHandling();
 app.UseHttpsRedirection();
+app.UseStaticFiles(); // Static files için (CSS, JS)
 app.UseRouting();
 app.UseCors("AllowAll");
+app.UseSession(); // Session middleware
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<GameHub>("/gameHub");
+app.MapHub<AdminHub>("/adminHub");
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Admin}/{action=Dashboard}/{id?}"); // Admin panel default route
 
 app.Run();

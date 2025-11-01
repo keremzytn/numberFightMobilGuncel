@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: numberfight-db
+    environment:
+      POSTGRES_DB: numberfight
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: numberfight-api
+    ports:
+      - "5227:5227"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=numberfight;Username=postgres;Password=postgres
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY:-your-256-bit-secret-key-here-minimum-32-characters-change-this-in-production}
+      - JwtSettings__Issuer=NumberFight
+      - JwtSettings__Audience=NumberFightClients
+      - JwtSettings__ExpirationInMinutes=60
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+

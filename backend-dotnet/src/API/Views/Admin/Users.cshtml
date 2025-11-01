@@ -1,0 +1,81 @@
+@model IEnumerable<User>
+@{
+    ViewData["Title"] = "Kullanıcılar";
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-people-fill"></i> Kullanıcılar</h1>
+        <span class="badge bg-primary fs-5">Toplam: @Model.Count()</span>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Kullanıcı Adı</th>
+                            <th>Email</th>
+                            <th>Durum</th>
+                            <th>Gold</th>
+                            <th>Kayıt Tarihi</th>
+                            <th>Son Görülme</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@user.Username</strong>
+                                </td>
+                                <td>@user.Email</td>
+                                <td>
+                                    @if (user.IsOnline)
+                                    {
+                                        <span class="badge bg-success"><i class="bi bi-circle-fill"></i> Online</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary"><i class="bi bi-circle"></i> Offline</span>
+                                    }
+                                    @if (user.IsBanned)
+                                    {
+                                        <br>
+
+                                        <span class="badge bg-danger mt-1"><i class="bi bi-ban"></i> Banlı</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-coin"></i> @user.Gold
+                                    </span>
+                                </td>
+                                <td>@user.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td>
+                                    @if (user.LastSeenAt.HasValue)
+                                    {
+                                        @user.LastSeenAt.Value.ToString("dd.MM.yyyy HH:mm")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-controller="Admin" asp-action="UserDetail" asp-route-id="@user.Id"
+                                        class="btn btn-sm btn-primary">
+                                        <i class="bi bi-eye"></i> Detay
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+

@@ -19464,6 +19464,62 @@
     "CSharpLanguageVersion": 1300
   },
   "RootNamespace": "API",
-  "Documents": [],
+  "Documents": [
+    {
+      "FilePath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/Users.cshtml",
+      "TargetPath": "Views\\Admin\\Users.cshtml",
+      "FileKind": "mvc"
+    },
+    {
+      "FilePath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/Games.cshtml",
+      "TargetPath": "Views\\Admin\\Games.cshtml",
+      "FileKind": "mvc"
+    },
+    {
+      "FilePath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/Login.cshtml",
+      "TargetPath": "Views\\Admin\\Login.cshtml",
+      "FileKind": "mvc"
+    },
+    {
+      "FilePath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/ActiveGames.cshtml",
+      "TargetPath": "Views\\Admin\\ActiveGames.cshtml",
+      "FileKind": "mvc"
+    },
+    {
+      "FilePath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/Friends.cshtml",
+      "TargetPath": "Views\\Admin\\Friends.cshtml",
+      "FileKind": "mvc"
+    },
+    {
+      "FilePath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/GameDetail.cshtml",
+      "TargetPath": "Views\\Admin\\GameDetail.cshtml",
+      "FileKind": "mvc"
+    },
+    {
+      "FilePath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/Dashboard.cshtml",
+      "TargetPath": "Views\\Admin\\Dashboard.cshtml",
+      "FileKind": "mvc"
+    },
+    {
+      "FilePath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/_ViewStart.cshtml",
+      "TargetPath": "Views\\_ViewStart.cshtml",
+      "FileKind": "mvc"
+    },
+    {
+      "FilePath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Shared/_Layout.cshtml",
+      "TargetPath": "Views\\Shared\\_Layout.cshtml",
+      "FileKind": "mvc"
+    },
+    {
+      "FilePath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/_ViewImports.cshtml",
+      "TargetPath": "Views\\_ViewImports.cshtml",
+      "FileKind": "mvc"
+    },
+    {
+      "FilePath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/UserDetail.cshtml",
+      "TargetPath": "Views\\Admin\\UserDetail.cshtml",
+      "FileKind": "mvc"
+    }
+  ],
   "SerializationFormat": "0.3"
 }

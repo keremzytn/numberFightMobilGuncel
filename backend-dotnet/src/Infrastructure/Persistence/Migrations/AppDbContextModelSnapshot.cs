@@ -196,6 +196,15 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("text");
 
+                    b.Property<string>("BanReason")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("BannedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("BannedUntil")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -205,6 +214,9 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.Property<int>("Gold")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("IsBanned")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsOnline")
                         .HasColumnType("boolean");
