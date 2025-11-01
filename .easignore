@@ -1,0 +1,25 @@
+# EAS Build Ignore
+
+# Backend (C# .NET projesi)
+backend-dotnet/
+
+# Node modules
+node_modules/
+
+# Build artifacts
+.expo/
+dist/
+web-build/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
