@@ -168,6 +168,7 @@ app.UseStaticFiles(); // Static files için (CSS, JS)
 app.UseRouting();
 app.UseCors("AllowAll");
 app.UseSession(); // Session middleware
+app.UseMiddleware<API.Middleware.ApiMonitoringMiddleware>(); // API Monitoring
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -166,6 +166,12 @@
                                 <i class="bi bi-person-hearts"></i> Arkadaşlıklar
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "ApiMonitoring" ? "active" : "")"
+                                asp-controller="Admin" asp-action="ApiMonitoring">
+                                <i class="bi bi-activity"></i> API İzleme
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </nav>

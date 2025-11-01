@@ -242,6 +242,95 @@ public class AdminController : Controller
     }
 
     [AdminAuthorize]
+    public IActionResult ApiMonitoring([FromQuery] ApiMonitoringFilter filter)
+    {
+        var stats = API.Middleware.ApiMonitoringService.GetStats();
+
+        // Filtreleme
+        var filteredStats = stats.EndpointStats.AsEnumerable();
+
+        // Search
+        if (!string.IsNullOrWhiteSpace(filter.SearchQuery))
+        {
+            filteredStats = filteredStats.Where(s =>
+                s.Endpoint.Contains(filter.SearchQuery, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Method
+        if (!string.IsNullOrWhiteSpace(filter.Method))
+        {
+            filteredStats = filteredStats.Where(s =>
+                s.Method.Equals(filter.Method, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Response Time
+        if (filter.MinResponseTime.HasValue)
+        {
+            filteredStats = filteredStats.Where(s => s.AverageResponseTimeMs >= filter.MinResponseTime.Value);
+        }
+        if (filter.MaxResponseTime.HasValue)
+        {
+            filteredStats = filteredStats.Where(s => s.AverageResponseTimeMs <= filter.MaxResponseTime.Value);
+        }
+
+        // Error Rate
+        if (filter.MinErrorRate.HasValue)
+        {
+            filteredStats = filteredStats.Where(s => s.ErrorRate >= filter.MinErrorRate.Value);
+        }
+        if (filter.MaxErrorRate.HasValue)
+        {
+            filteredStats = filteredStats.Where(s => s.ErrorRate <= filter.MaxErrorRate.Value);
+        }
+
+        // Min Requests
+        if (filter.MinRequests.HasValue)
+        {
+            filteredStats = filteredStats.Where(s => s.TotalRequests >= filter.MinRequests.Value);
+        }
+
+        // Sorting
+        filteredStats = filter.SortBy?.ToLower() switch
+        {
+            "endpoint" => filter.SortDescending
+                ? filteredStats.OrderByDescending(s => s.Endpoint)
+                : filteredStats.OrderBy(s => s.Endpoint),
+            "method" => filter.SortDescending
+                ? filteredStats.OrderByDescending(s => s.Method)
+                : filteredStats.OrderBy(s => s.Method),
+            "totalrequests" => filter.SortDescending
+                ? filteredStats.OrderByDescending(s => s.TotalRequests)
+                : filteredStats.OrderBy(s => s.TotalRequests),
+            "averageresponsetime" => filter.SortDescending
+                ? filteredStats.OrderByDescending(s => s.AverageResponseTimeMs)
+                : filteredStats.OrderBy(s => s.AverageResponseTimeMs),
+            "errorrate" => filter.SortDescending
+                ? filteredStats.OrderByDescending(s => s.ErrorRate)
+                : filteredStats.OrderBy(s => s.ErrorRate),
+            "lastrequest" => filter.SortDescending
+                ? filteredStats.OrderByDescending(s => s.LastRequestAt)
+                : filteredStats.OrderBy(s => s.LastRequestAt),
+            _ => filter.SortDescending
+                ? filteredStats.OrderByDescending(s => s.TotalRequests)
+                : filteredStats.OrderBy(s => s.TotalRequests)
+        };
+
+        stats.EndpointStats = filteredStats.ToList();
+        ViewBag.Filter = filter;
+
+        return View(stats);
+    }
+
+    [HttpPost]
+    [AdminAuthorize]
+    public IActionResult ResetApiStats()
+    {
+        API.Middleware.ApiMonitoringService.Reset();
+        TempData["Success"] = "API istatistikleri sıfırlandı!";
+        return RedirectToAction("ApiMonitoring");
+    }
+
+    [AdminAuthorize]
     public async Task<IActionResult> UserDetail(string id)
     {
         var user = await _userRepository.GetByIdAsync(id);

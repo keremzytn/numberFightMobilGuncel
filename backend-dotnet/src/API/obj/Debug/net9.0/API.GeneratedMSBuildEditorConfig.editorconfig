@@ -32,6 +32,10 @@ build_property.EnableCodeStyleSeverity =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWRtaW4vQWN0aXZlR2FtZXMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/ApiMonitoring.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWRtaW4vQXBpTW9uaXRvcmluZy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/Dashboard.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWRtaW4vRGFzaGJvYXJkLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 

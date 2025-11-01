@@ -19491,6 +19491,11 @@
       "FileKind": "mvc"
     },
     {
+      "FilePath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/ApiMonitoring.cshtml",
+      "TargetPath": "Views\\Admin\\ApiMonitoring.cshtml",
+      "FileKind": "mvc"
+    },
+    {
       "FilePath": "/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/Views/Admin/GameDetail.cshtml",
       "TargetPath": "Views\\Admin\\GameDetail.cshtml",
       "FileKind": "mvc"
