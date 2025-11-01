@@ -27,13 +27,14 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Add AutoMapper
-builder.Services.AddAutoMapper(config => 
+builder.Services.AddAutoMapper(config =>
 {
     config.AddProfile<MappingProfile>();
 });
 
 // Add MediatR
-builder.Services.AddMediatR(cfg => {
+builder.Services.AddMediatR(cfg =>
+{
     cfg.RegisterServicesFromAssembly(typeof(Application.Features.Users.Commands.CreateUser.CreateUserCommand).Assembly);
 });
 
@@ -99,6 +100,13 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// ✅ NGROK UYARI SAYFASINI KALDIRAN MIDDLEWARE
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Add("ngrok-skip-browser-warning", "true");
+    await next();
+});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

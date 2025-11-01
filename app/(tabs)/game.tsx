@@ -196,24 +196,23 @@ export default function GameScreen() {
         return connected;
       };
 
+      socketService.off('waitingForMatch');
       socketService.on('waitingForMatch', () => {
         console.log('Eşleşme bekleniyor...');
         setMatchStatus('searching');
       });
 
+      socketService.off('matchFound');
       socketService.on('matchFound', (data: { gameId: string; isPlayer1: boolean; opponentId: string }) => {
         console.log('Eşleşme bulundu:', data);
         setMatchStatus('found');
         setGameId(data.gameId);
       });
 
+      socketService.off('gameState');
       socketService.on('gameState', (gameState: GameState) => {
         console.log('Oyun durumu:', gameState);
-
-        if (matchStatus === 'found' || matchStatus === 'searching') {
-          setMatchStatus('playing');
-        }
-
+        setMatchStatus('playing');
         setOnlineGameState(gameState);
         setTimeLeft(30);
         setSelectedCard(null);
@@ -221,10 +220,12 @@ export default function GameScreen() {
         setOpponentPlayed(false);
       });
 
+      socketService.off('opponentPlayed');
       socketService.on('opponentPlayed', () => {
         setOpponentPlayed(true);
       });
 
+      socketService.off('roundResult');
       socketService.on('roundResult', (result: RoundResultType) => {
         console.log('Round sonucu:', result);
         setLastRoundResult({
@@ -238,11 +239,13 @@ export default function GameScreen() {
         setShowResult(true);
       });
 
+      socketService.off('gameEnd');
       socketService.on('gameEnd', (result: GameEndResult) => {
         console.log('Oyun bitti:', result);
         showOnlineGameEndDialog(result);
       });
 
+      socketService.off('error');
       socketService.on('error', (error: string) => {
         console.error('Oyun hatası:', error);
         Alert.alert('Hata', error);
