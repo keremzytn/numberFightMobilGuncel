@@ -1,23 +1,7 @@
-import { HubConnectionBuilder, HubConnection, LogLevel, HttpTransportType, IHttpConnectionOptions } from '@microsoft/signalr';
-import { HttpConnection } from '@microsoft/signalr/dist/esm/HttpConnection';
+import { HubConnectionBuilder, HubConnection, LogLevel, HttpTransportType } from '@microsoft/signalr';
 import { Platform } from 'react-native';
 import { SIGNALR_URL } from '../config/env';
 import { authService } from './authService';
-import NetInfo from '@react-native-community/netinfo';
-
-// Custom HttpConnection class to prevent NetInfo usage
-class CustomHttpConnection extends HttpConnection {
-    constructor(url: string, options?: IHttpConnectionOptions) {
-        super(url, options);
-        // Force connection to be considered online
-        (this as any).connectionState = 'Connected';
-    }
-}
-
-// WebSocket polyfill for React Native
-if (Platform.OS !== 'web') {
-    (global as any).WebSocket = require('react-native-websockets').default;
-}
 
 export interface GameState {
     gameId: string;
@@ -27,13 +11,17 @@ export interface GameState {
     validCards: number[];
     forbiddenCards: number[];
     roundStartTime: string;
+    status: string;
+    opponentId?: string;
 }
 
 export interface RoundResult {
     round: number;
     player1Card: number;
     player2Card: number;
+    opponentCard: number;
     winner: string | null;
+    isWinner: boolean;
     player1Score: number;
     player2Score: number;
 }
@@ -43,6 +31,8 @@ export interface GameEndResult {
     player1Score: number;
     player2Score: number;
     winnerId: string | null;
+    isWinner: boolean;
+    winner: string | null;
     totalRounds: number;
 }
 
@@ -53,38 +43,23 @@ class SocketService {
 
     async connect(): Promise<void> {
         try {
-            // İnternet bağlantısını kontrol et
-            const netInfo = await NetInfo.fetch();
-            if (!netInfo.isConnected) {
-                throw new Error('İnternet bağlantısı yok');
-            }
-
             const token = await authService.getToken();
             if (!token) throw new Error('Token bulunamadı');
 
             const userId = await this.getUserId();
 
             const url = `${SIGNALR_URL}?userId=${userId}&access_token=${token}`;
-            const options: IHttpConnectionOptions = {
-                skipNegotiation: true,
-                transport: Platform.OS === 'web' ? undefined : HttpTransportType.WebSockets,
-                timeout: 30000,
-                headers: {
-                    'X-Skip-Connection-Status': 'true' // Custom header to identify our connection
-                }
-            };
-
-            const connectionOptions = {
-                ...options,
-                httpConnectionConstructor: CustomHttpConnection
-            } as IHttpConnectionOptions & { httpConnectionConstructor: typeof CustomHttpConnection };
 
             this.connection = new HubConnectionBuilder()
-                .withUrl(url, connectionOptions)
+                .withUrl(url, {
+                    skipNegotiation: true,
+                    transport: HttpTransportType.WebSockets,
+                    accessTokenFactory: () => token
+                })
                 .withAutomaticReconnect({
                     nextRetryDelayInMilliseconds: retryContext => {
-                        if (retryContext.previousRetryCount === 3) {
-                            return null; // Stop retrying after 3 attempts
+                        if (retryContext.previousRetryCount >= 3) {
+                            return null;
                         }
                         return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 30000);
                     }
@@ -92,8 +67,8 @@ class SocketService {
                 .configureLogging(LogLevel.Information)
                 .build();
 
-            await this.connection.start();
             this.setupConnectionEvents();
+            await this.connection.start();
             console.log('SignalR bağlantısı başarılı');
         } catch (error) {
             console.error('SignalR bağlantı hatası:', error);
@@ -101,23 +76,8 @@ class SocketService {
         }
     }
 
-    private unsubscribeNetInfo: (() => void) | null = null;
-
     private setupConnectionEvents(): void {
         if (!this.connection) return;
-
-        // İnternet bağlantısını dinle
-        this.unsubscribeNetInfo = NetInfo.addEventListener(state => {
-            if (!state.isConnected && this.isConnected()) {
-                console.log('İnternet bağlantısı kesildi');
-                this.disconnect();
-            } else if (state.isConnected && !this.isConnected()) {
-                console.log('İnternet bağlantısı tekrar sağlandı, yeniden bağlanılıyor...');
-                this.connect().catch(error => {
-                    console.error('Yeniden bağlanma hatası:', error);
-                });
-            }
-        });
 
         this.connection.onreconnecting(() => {
             this.reconnectAttempts++;
@@ -131,11 +91,6 @@ class SocketService {
 
         this.connection.onclose(() => {
             console.log('Bağlantı kapandı');
-            // Bağlantı kapandığında NetInfo listener'ı temizle
-            if (this.unsubscribeNetInfo) {
-                this.unsubscribeNetInfo();
-                this.unsubscribeNetInfo = null;
-            }
         });
     }
 
@@ -192,10 +147,6 @@ class SocketService {
     }
 
     disconnect(): void {
-        if (this.unsubscribeNetInfo) {
-            this.unsubscribeNetInfo();
-            this.unsubscribeNetInfo = null;
-        }
         this.connection?.stop();
         this.connection = null;
     }
@@ -206,3 +157,4 @@ class SocketService {
 }
 
 export const socketService = new SocketService();
+export type { HubConnection };

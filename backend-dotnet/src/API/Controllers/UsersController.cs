@@ -33,16 +33,22 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("register")]
-    public async Task<ActionResult<UserDto>> Register([FromBody] CreateUserCommand command)
+    public async Task<ActionResult<LoginResponse>> Register([FromBody] CreateUserCommand command)
     {
         try
         {
-            var user = await _mediator.Send(command);
-            return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
+            var response = await _mediator.Send(command);
+            return Ok(response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {
-            return BadRequest(ex.Message);
+            Console.WriteLine($"Register hatası: {ex.Message}");
+            Console.WriteLine($"InnerException: {ex.InnerException?.Message}");
+            return BadRequest(new { message = ex.Message });
         }
     }
 

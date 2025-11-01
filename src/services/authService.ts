@@ -95,13 +95,28 @@ class AuthService {
 
         try {
             if (!response.ok) {
-                const error = await response.json();
+                let errorMessage = 'Kayıt başarısız';
+                try {
+                    const errorData = await response.text();
+                    console.log('Backend hatası:', errorData);
+
+                    // JSON ise parse et, değilse direkt text olarak kullan
+                    try {
+                        const errorJson = JSON.parse(errorData);
+                        errorMessage = errorJson.message || errorJson.title || errorData;
+                    } catch {
+                        errorMessage = errorData;
+                    }
+                } catch (e) {
+                    console.error('Hata mesajı okunamadı:', e);
+                }
+
                 if (response.status === 400) {
-                    throw new AuthError('Bu e-posta adresi zaten kullanılıyor', 'EMAIL_EXISTS');
+                    throw new AuthError(errorMessage, 'BAD_REQUEST');
                 } else if (response.status >= 500) {
                     throw new AuthError('Sunucu hatası. Lütfen daha sonra tekrar deneyin.', 'SERVER_ERROR');
                 }
-                throw new AuthError(error.message || 'Kayıt başarısız', 'UNKNOWN_ERROR');
+                throw new AuthError(errorMessage, 'UNKNOWN_ERROR');
             }
 
             const result = await response.json();
@@ -115,6 +130,7 @@ class AuthService {
             if (error instanceof AuthError) {
                 throw error;
             }
+            console.error('Register catch bloğu hatası:', error);
             throw new AuthError('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'UNKNOWN_ERROR');
         }
     }

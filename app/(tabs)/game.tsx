@@ -5,7 +5,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Clock, User, Bot, Trophy, ArrowLeft, Wifi, WifiOff } from 'lucide-react-native';
 import { GameEngine } from '@/utils/GameEngine';
 import { BotPlayer } from '@/utils/BotPlayer';
-import { socketManager, GameState, RoundResult as RoundResultType, GameEndResult } from '@/utils/SocketManager';
+import { socketService, GameState, RoundResult as RoundResultType, GameEndResult } from '@/src/services/socketService';
 import { API_URL } from '@/src/config/env';
 import CardComponent from '@/components/CardComponent';
 import GameHeader from '@/components/GameHeader';
@@ -155,27 +155,25 @@ export default function GameScreen() {
   }, [mode, onlineGameState, gameEngine]);
 
   const goBack = useCallback(() => {
-    if (mode === 'online' && gameId) {
-      socketManager.leaveGame(gameId);
-    }
+    cleanup();
     router.push('/');
   }, [mode, gameId]);
 
   const cleanup = () => {
     if (mode === 'online') {
-      socketManager.off('connected');
-      socketManager.off('disconnected');
-      socketManager.off('reconnecting');
-      socketManager.off('error');
-      socketManager.off('waitingForMatch');
-      socketManager.off('matchFound');
-      socketManager.off('roundStart');
-      socketManager.off('opponentPlayed');
-      socketManager.off('roundResult');
-      socketManager.off('gameEnd');
-      socketManager.off('opponentLeft');
-      socketManager.off('opponentDisconnected');
-      socketManager.disconnect();
+      socketService.off('connected');
+      socketService.off('disconnected');
+      socketService.off('reconnecting');
+      socketService.off('error');
+      socketService.off('waitingForMatch');
+      socketService.off('matchFound');
+      socketService.off('gameState');
+      socketService.off('opponentPlayed');
+      socketService.off('roundResult');
+      socketService.off('gameEnd');
+      socketService.off('opponentLeft');
+      socketService.off('opponentDisconnected');
+      socketService.disconnect();
     }
     setOnlineGameState(null);
     setGameId(null);
@@ -187,99 +185,35 @@ export default function GameScreen() {
 
   const initializeOnlineGame = async () => {
     try {
-      cleanup(); // Önceki bağlantıyı temizle
-      await socketManager.connect();
+      cleanup();
+      await socketService.connect();
       setIsConnected(true);
       setConnectionError(null);
 
-      // Set up event listeners
-      socketManager.on('connected', () => {
-        console.log('Socket bağlantısı başarılı');
-        setIsConnected(true);
-        setConnectionError(null);
-        setReconnecting(false);
-      });
-
-      // Bağlantı durumunu kontrol eden yardımcı fonksiyon
       const checkConnection = () => {
-        const connected = socketManager.isConnected();
-        console.log('Bağlantı durumu kontrol:', { connected });
+        const connected = socketService.isConnected();
         setIsConnected(connected);
         return connected;
       };
 
-      socketManager.on('disconnected', ({ reason }: DisconnectReason) => {
-        console.log('Socket bağlantısı kesildi, sebep:', reason);
-        setIsConnected(false);
-        if (reason === 'transport close' || reason === 'ping timeout') {
-          setConnectionError('Bağlantı kesildi. Yeniden bağlanılıyor...');
-        }
-      });
-
-      socketManager.on('reconnecting', ({ attempt }: ReconnectAttempt) => {
-        console.log('Yeniden bağlanma denemesi:', attempt);
-        setReconnecting(true);
-        setConnectionError(`Yeniden bağlanılıyor... (Deneme ${attempt}/5)`);
-      });
-
-      socketManager.on('waitingForMatch', () => {
+      socketService.on('waitingForMatch', () => {
         console.log('Eşleşme bekleniyor...');
         setMatchStatus('searching');
       });
 
-      socketManager.on('matchFound', (data: { gameId: string }) => {
-        console.log('Eşleşme bulundu, detaylar:', {
-          gameId: data.gameId,
-          currentStatus: matchStatus,
-          isConnected: checkConnection()
-        });
-
-        if (!checkConnection()) {
-          console.error('Eşleşme bulundu ama bağlantı yok!');
-          socketManager.reconnect();
-          return;
-        }
-
+      socketService.on('matchFound', (data: { gameId: string; isPlayer1: boolean; opponentId: string }) => {
+        console.log('Eşleşme bulundu:', data);
         setMatchStatus('found');
         setGameId(data.gameId);
-
-        // Kısa bir gecikme ile playerReady gönder
-        setTimeout(() => {
-          if (checkConnection()) {
-            console.log('playerReady gönderiliyor...');
-            socketManager.sendPlayerReady(data.gameId);
-          } else {
-            console.error('playerReady gönderilemedi - bağlantı yok!');
-          }
-        }, 500);
       });
 
-      socketManager.on('roundStart', (gameState: GameState) => {
-        console.log('Yeni round başladı, detaylar:', {
-          gameId: gameState.gameId,
-          currentGameId: gameId,
-          matchStatus: matchStatus,
-          gameState: gameState
-        });
+      socketService.on('gameState', (gameState: GameState) => {
+        console.log('Oyun durumu:', gameState);
 
-        if (!gameState?.gameId) {
-          console.error('Geçersiz oyun durumu:', gameState);
-          Alert.alert('Hata', 'Geçersiz oyun durumu');
-          return;
+        if (matchStatus === 'found' || matchStatus === 'searching') {
+          setMatchStatus('playing');
         }
 
-        if (!checkConnection()) {
-          console.error('Round başlatılamıyor - bağlantı yok!');
-          return;
-        }
-
-        if (gameState.gameId !== gameId) {
-          console.error('Oyun ID uyuşmazlığı:', { beklenen: gameId, gelen: gameState.gameId });
-          return;
-        }
-
-        // Tüm kontroller geçtiyse oyunu başlat
-        setMatchStatus('playing');
         setOnlineGameState(gameState);
         setTimeLeft(30);
         setSelectedCard(null);
@@ -287,11 +221,12 @@ export default function GameScreen() {
         setOpponentPlayed(false);
       });
 
-      socketManager.on('opponentPlayed', () => {
+      socketService.on('opponentPlayed', () => {
         setOpponentPlayed(true);
       });
 
-      socketManager.on('roundResult', (result: RoundResultType) => {
+      socketService.on('roundResult', (result: RoundResultType) => {
+        console.log('Round sonucu:', result);
         setLastRoundResult({
           round: result.round,
           player1Card: result.opponentCard,
@@ -301,78 +236,26 @@ export default function GameScreen() {
           player2Score: result.player2Score,
         });
         setShowResult(true);
-
-        setTimeout(() => {
-          setOnlineGameState(prev => {
-            if (!prev) return null;
-            return {
-              ...prev,
-              player1Score: result.player1Score,
-              player2Score: result.player2Score,
-              currentRound: result.round + 1,
-              status: 'playing'
-            };
-          });
-        }, 2000);
       });
 
-      socketManager.on('gameEnd', (result: GameEndResult) => {
+      socketService.on('gameEnd', (result: GameEndResult) => {
+        console.log('Oyun bitti:', result);
         showOnlineGameEndDialog(result);
       });
 
-      socketManager.on('error', (error: ErrorType) => {
-        console.error('Oyun hatası detayları:', {
-          error,
-          currentStatus: matchStatus,
-          gameId: gameId,
-          isConnected: checkConnection()
-        });
-        if (error.type === 'connection') {
-          setConnectionError(error.message);
-          setIsConnected(false);
-        } else if (error.type === 'game') {
-          Alert.alert('Oyun Hatası', error.message, [
-            {
-              text: 'Ana Menü', onPress: () => {
-                cleanup();
-                router.push('/');
-              }
-            }
-          ]);
-        }
-      });
-
-      socketManager.on('opponentLeft', () => {
-        console.log('Rakip oyunu terk etti');
-        Alert.alert('Oyun Bitti', 'Rakibiniz oyunu terk etti.', [
-          {
-            text: 'Ana Menü', onPress: () => {
-              cleanup();
-              router.push('/');
-            }
-          }
-        ]);
-      });
-
-      socketManager.on('opponentDisconnected', () => {
-        console.log('Rakibin bağlantısı kesildi');
-        Alert.alert('Bağlantı Sorunu', 'Rakibinizin bağlantısı kesildi.', [
-          {
-            text: 'Ana Menü', onPress: () => {
-              cleanup();
-              router.push('/');
-            }
-          }
-        ]);
+      socketService.on('error', (error: string) => {
+        console.error('Oyun hatası:', error);
+        Alert.alert('Hata', error);
       });
 
       // Start matchmaking
       console.log('Eşleşme aranıyor...');
-      socketManager.findMatch();
+      await socketService.findMatch('online');
 
     } catch (error) {
       console.error('Sunucuya bağlanma hatası:', error);
       setConnectionError('Sunucuya bağlanılamadı');
+      setIsConnected(false);
     }
   };
 
@@ -383,7 +266,7 @@ export default function GameScreen() {
 
     if (mode === 'online' && gameId) {
       // Online mode
-      socketManager.playCard(gameId, cardNumber);
+      socketService.playCard(gameId, cardNumber);
     } else {
       // Bot mode
       let botCard = botPlayer.selectCard(gameEngine.getValidCards(2), localGameState);

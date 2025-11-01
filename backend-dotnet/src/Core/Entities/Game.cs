@@ -83,14 +83,9 @@ public class Game : BaseEntity
             CreatedAt = DateTime.UtcNow
         };
         Moves.Add(move);
-
-        if (Player1Card.HasValue && Player2Card.HasValue)
-        {
-            ResolveRound();
-        }
     }
 
-    private void ResolveRound()
+    public void ResolveRound()
     {
         if (!Player1Card.HasValue || !Player2Card.HasValue)
             return;

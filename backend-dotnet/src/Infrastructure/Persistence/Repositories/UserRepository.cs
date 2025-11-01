@@ -20,12 +20,12 @@ public class UserRepository : IUserRepository
 
     public async Task<User?> GetByEmailAsync(string email)
     {
-        return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        return await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
     }
 
     public async Task<User?> GetByUsernameAsync(string username)
     {
-        return await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+        return await _context.Users.FirstOrDefaultAsync(u => u.Username.ToLower() == username.ToLower());
     }
 
     public async Task<IEnumerable<User>> GetAllAsync()
@@ -35,9 +35,25 @@ public class UserRepository : IUserRepository
 
     public async Task<User> AddAsync(User user)
     {
-        await _context.Users.AddAsync(user);
-        await _context.SaveChangesAsync();
-        return user;
+        try
+        {
+            await _context.Users.AddAsync(user);
+            await _context.SaveChangesAsync();
+            return user;
+        }
+        catch (DbUpdateException ex)
+        {
+            // Unique constraint hatası
+            if (ex.InnerException?.Message.Contains("IX_Users_Email") == true)
+            {
+                throw new InvalidOperationException("Bu e-posta adresi zaten kullanılıyor");
+            }
+            if (ex.InnerException?.Message.Contains("IX_Users_Username") == true)
+            {
+                throw new InvalidOperationException("Bu kullanıcı adı zaten kullanılıyor");
+            }
+            throw;
+        }
     }
 
     public async Task UpdateAsync(User user)

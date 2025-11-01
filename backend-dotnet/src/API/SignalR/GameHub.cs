@@ -20,7 +20,7 @@ public class GameHub : Hub
     private static readonly BotPlayer _botPlayer = new();
 
     public GameHub(
-        IMediator mediator, 
+        IMediator mediator,
         IGameRepository gameRepository,
         IMatchRepository matchRepository,
         IUserRepository userRepository,
@@ -40,14 +40,14 @@ public class GameHub : Hub
         {
             _userConnections[userId] = Context.ConnectionId;
             await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId}");
-            
+
             // Update user online status
             var user = await _userRepository.GetByIdAsync(userId);
             if (user != null)
             {
                 user.SetOnlineStatus(true);
                 await _userRepository.UpdateAsync(user);
-                
+
                 // Notify friends that user is online
                 await NotifyFriendsOnlineStatus(userId, true);
             }
@@ -63,14 +63,14 @@ public class GameHub : Hub
             _userConnections.Remove(userId);
             _waitingPlayers.Remove(userId);
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"user_{userId}");
-            
+
             // Update user offline status
             var user = await _userRepository.GetByIdAsync(userId);
             if (user != null)
             {
                 user.SetOnlineStatus(false);
                 await _userRepository.UpdateAsync(user);
-                
+
                 // Notify friends that user is offline
                 await NotifyFriendsOnlineStatus(userId, false);
             }
@@ -152,6 +152,8 @@ public class GameHub : Hub
 
         try
         {
+            var previousRound = game.CurrentRound;
+
             game.PlayCard(userId, cardNumber);
 
             // Bot modu kontrolü
@@ -162,14 +164,23 @@ public class GameHub : Hub
                 game.PlayCard("bot", botCard);
             }
 
-            await _gameRepository.UpdateAsync(game);
-
+            // Kart oynadığını bildir
             await Clients.Caller.SendAsync("cardPlayed", new { cardNumber });
             await Clients.GroupExcept($"game_{gameId}", Context.ConnectionId).SendAsync("opponentPlayed");
 
+            // Her iki oyuncu da kart oynadıysa round sonucunu gönder
             if (game.Player1Card.HasValue && game.Player2Card.HasValue)
             {
-                await SendGameState(game);
+                // Kartları kaydet (ResolveRound bunları null yapacak)
+                var player1Card = game.Player1Card.Value;
+                var player2Card = game.Player2Card.Value;
+
+                // Round'u çöz
+                game.ResolveRound();
+                await _gameRepository.UpdateAsync(game);
+
+                // Round sonucunu hesapla ve gönder
+                await SendRoundResult(game, previousRound, player1Card, player2Card);
 
                 if (game.Status == GameStatus.Completed)
                 {
@@ -184,6 +195,12 @@ public class GameHub : Hub
                     await _matchRepository.AddAsync(match);
 
                     await SendGameResult(game);
+                }
+                else
+                {
+                    // Sonraki round için gameState gönder
+                    await Task.Delay(2000);
+                    await SendGameState(game);
                 }
             }
         }
@@ -208,7 +225,9 @@ public class GameHub : Hub
                 player2Score = game.Player2Score,
                 validCards = game.GetValidCards(game.Player1Id),
                 forbiddenCards = game.Player1ForbiddenCards,
-                roundStartTime = game.RoundStartTime
+                roundStartTime = game.RoundStartTime,
+                status = game.Status.ToString(),
+                opponentId = game.Player2Id
             };
             await Clients.Client(player1Connection).SendAsync("gameState", player1State);
         }
@@ -219,51 +238,120 @@ public class GameHub : Hub
             {
                 gameId = game.Id,
                 currentRound = game.CurrentRound,
-                player1Score = game.Player1Score,
-                player2Score = game.Player2Score,
+                player1Score = game.Player2Score,
+                player2Score = game.Player1Score,
                 validCards = game.GetValidCards(game.Player2Id),
                 forbiddenCards = game.Player2ForbiddenCards,
-                roundStartTime = game.RoundStartTime
+                roundStartTime = game.RoundStartTime,
+                status = game.Status.ToString(),
+                opponentId = game.Player1Id
             };
             await Clients.Client(player2Connection).SendAsync("gameState", player2State);
         }
     }
 
+    private async Task SendRoundResult(Game game, int round, int player1Card, int player2Card)
+    {
+        var player1Connection = _userConnections.GetValueOrDefault(game.Player1Id);
+        var player2Connection = game.Player2Id != "bot" ? _userConnections.GetValueOrDefault(game.Player2Id) : null;
+
+        string? winnerId = null;
+        if (player1Card > player2Card)
+            winnerId = game.Player1Id;
+        else if (player2Card > player1Card)
+            winnerId = game.Player2Id;
+
+        if (!string.IsNullOrEmpty(player1Connection))
+        {
+            var player1Result = new
+            {
+                round = round,
+                player1Card = player1Card,
+                player2Card = player2Card,
+                opponentCard = player2Card,
+                winner = winnerId,
+                isWinner = winnerId == game.Player1Id,
+                player1Score = game.Player1Score,
+                player2Score = game.Player2Score
+            };
+            await Clients.Client(player1Connection).SendAsync("roundResult", player1Result);
+        }
+
+        if (!string.IsNullOrEmpty(player2Connection))
+        {
+            var player2Result = new
+            {
+                round = round,
+                player1Card = player2Card,
+                player2Card = player1Card,
+                opponentCard = player1Card,
+                winner = winnerId,
+                isWinner = winnerId == game.Player2Id,
+                player1Score = game.Player2Score,
+                player2Score = game.Player1Score
+            };
+            await Clients.Client(player2Connection).SendAsync("roundResult", player2Result);
+        }
+    }
+
     private async Task SendGameResult(Game game)
     {
-        var result = new
-        {
-            gameId = game.Id,
-            player1Score = game.Player1Score,
-            player2Score = game.Player2Score,
-            winnerId = game.WinnerId,
-            totalRounds = 7
-        };
+        var player1Connection = _userConnections.GetValueOrDefault(game.Player1Id);
+        var player2Connection = game.Player2Id != "bot" ? _userConnections.GetValueOrDefault(game.Player2Id) : null;
 
-        await Clients.Group($"game_{game.Id}").SendAsync("gameEnded", result);
+        if (!string.IsNullOrEmpty(player1Connection))
+        {
+            var player1Result = new
+            {
+                gameId = game.Id,
+                player1Score = game.Player1Score,
+                player2Score = game.Player2Score,
+                winnerId = game.WinnerId,
+                winner = game.WinnerId,
+                isWinner = game.WinnerId == game.Player1Id,
+                totalRounds = 7
+            };
+            await Clients.Client(player1Connection).SendAsync("gameEnd", player1Result);
+        }
+
+        if (!string.IsNullOrEmpty(player2Connection))
+        {
+            var player2Result = new
+            {
+                gameId = game.Id,
+                player1Score = game.Player2Score,
+                player2Score = game.Player1Score,
+                winnerId = game.WinnerId,
+                winner = game.WinnerId,
+                isWinner = game.WinnerId == game.Player2Id,
+                totalRounds = 7
+            };
+            await Clients.Client(player2Connection).SendAsync("gameEnd", player2Result);
+        }
     }
 
     private string GetCurrentUserId()
     {
-        return Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-            ?? Context.GetHttpContext()?.Request.Query["userId"].ToString() 
+        return Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? Context.GetHttpContext()?.Request.Query["userId"].ToString()
             ?? throw new UnauthorizedAccessException("Kullanıcı kimliği bulunamadı");
     }
 
     private async Task NotifyFriendsOnlineStatus(string userId, bool isOnline)
     {
         var friends = await _friendRepository.GetUserFriendsAsync(userId, FriendshipStatus.Accepted);
-        
+
         foreach (var friend in friends)
         {
             var friendUserId = friend.UserId == userId ? friend.FriendUserId : friend.UserId;
             var friendConnection = _userConnections.GetValueOrDefault(friendUserId);
-            
+
             if (!string.IsNullOrEmpty(friendConnection))
             {
-                await Clients.Client(friendConnection).SendAsync("friendOnlineStatusChanged", new { 
-                    friendId = userId, 
-                    isOnline = isOnline 
+                await Clients.Client(friendConnection).SendAsync("friendOnlineStatusChanged", new
+                {
+                    friendId = userId,
+                    isOnline = isOnline
                 });
             }
         }
@@ -274,7 +362,7 @@ public class GameHub : Hub
         try
         {
             var userId = GetCurrentUserId();
-            
+
             // Check if they are friends
             var areFriends = await _friendRepository.AreFriendsAsync(userId, friendUserId);
             if (!areFriends)
@@ -301,8 +389,9 @@ public class GameHub : Hub
             _friendInvitations[friendUserId].Add(game.Id);
 
             // Send invitation to friend
-            await Clients.Client(friendConnection).SendAsync("friendGameInvitation", new { 
-                gameId = game.Id, 
+            await Clients.Client(friendConnection).SendAsync("friendGameInvitation", new
+            {
+                gameId = game.Id,
                 fromUserId = userId,
                 fromUsername = (await _userRepository.GetByIdAsync(userId))?.Username
             });
@@ -321,7 +410,7 @@ public class GameHub : Hub
         {
             var userId = GetCurrentUserId();
             var game = await _gameRepository.GetByIdAsync(gameId);
-            
+
             if (game == null)
             {
                 await Clients.Caller.SendAsync("error", "Oyun bulunamadı");
@@ -386,8 +475,9 @@ public class GameHub : Hub
         {
             var userId = GetCurrentUserId();
             var onlineFriends = await _friendRepository.GetOnlineFriendsAsync(userId);
-            
-            await Clients.Caller.SendAsync("onlineFriends", onlineFriends.Select(f => new {
+
+            await Clients.Caller.SendAsync("onlineFriends", onlineFriends.Select(f => new
+            {
                 id = f.Id,
                 username = f.Username,
                 isOnline = f.IsOnline

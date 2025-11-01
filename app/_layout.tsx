@@ -1,7 +1,3 @@
-// SignalR Platform Fix - HER ŞEYDEN ÖNCE YÜKLENMELI
-import '../signalr-platform-fix';
-import '../src/utils/netinfo-polyfill';
-
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';

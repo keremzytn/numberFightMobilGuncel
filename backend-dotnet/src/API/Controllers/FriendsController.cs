@@ -25,7 +25,7 @@ public class FriendsController : ControllerBase
 
     private string GetCurrentUserId()
     {
-        return User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+        return User.FindFirst(ClaimTypes.NameIdentifier)?.Value
             ?? throw new UnauthorizedAccessException("Kullanıcı kimliği bulunamadı");
     }
 
@@ -36,7 +36,7 @@ public class FriendsController : ControllerBase
         {
             var userId = GetCurrentUserId();
             FriendshipStatus? friendshipStatus = null;
-            
+
             if (!string.IsNullOrEmpty(status) && Enum.TryParse<FriendshipStatus>(status, true, out var parsedStatus))
             {
                 friendshipStatus = parsedStatus;
@@ -58,7 +58,7 @@ public class FriendsController : ControllerBase
         {
             var userId = GetCurrentUserId();
             var pendingRequests = await _mediator.Send(new GetFriendsQuery(userId, FriendshipStatus.Pending));
-            
+
             // Filter to only show requests where current user is the recipient
             var incomingRequests = pendingRequests.Where(f => f.FriendUserId == userId).ToList();
             return Ok(incomingRequests);
@@ -76,7 +76,7 @@ public class FriendsController : ControllerBase
         {
             var userId = GetCurrentUserId();
             var pendingRequests = await _mediator.Send(new GetFriendsQuery(userId, FriendshipStatus.Pending));
-            
+
             // Filter to only show requests where current user is the sender
             var sentRequests = pendingRequests.Where(f => f.UserId == userId).ToList();
             return Ok(sentRequests);

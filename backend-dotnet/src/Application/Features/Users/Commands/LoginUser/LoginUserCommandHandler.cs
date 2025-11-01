@@ -23,7 +23,9 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, LoginRe
 
     public async Task<LoginResponse> Handle(LoginUserCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByEmailAsync(request.Email);
+        var email = request.Email.Trim().ToLowerInvariant();
+
+        var user = await _userRepository.GetByEmailAsync(email);
         if (user == null)
             throw new KeyNotFoundException("Kullanıcı bulunamadı");
 
