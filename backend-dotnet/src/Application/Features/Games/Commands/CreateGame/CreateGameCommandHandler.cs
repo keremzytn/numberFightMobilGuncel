@@ -33,7 +33,30 @@ public class CreateGameCommandHandler : IRequestHandler<CreateGameCommand, GameD
         if (player2 == null)
             throw new KeyNotFoundException($"Player2 ID: {request.Player2Id} bulunamadı");
 
-        var game = Game.Create(request.Player1Id, request.Player2Id);
+        var game = Game.Create(request.Player1Id, request.Player2Id, request.Mode);
+        
+        // Giriş ücretini çek
+        try
+        {
+            player1.RemoveGold(game.EntryFee);
+            game.MarkPlayerPaid(request.Player1Id);
+            
+            // Bot maçı değilse player2'den de çek
+            if (request.Mode == GameMode.Online)
+            {
+                player2.RemoveGold(game.EntryFee);
+                game.MarkPlayerPaid(request.Player2Id);
+            }
+            else // Bot maçı
+            {
+                game.MarkPlayerPaid(request.Player2Id); // Bot ücretsiz
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            throw new InvalidOperationException("Yetersiz gold miktarı");
+        }
+
         await _gameRepository.AddAsync(game);
 
         return _mapper.Map<GameDto>(game);

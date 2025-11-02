@@ -41,7 +41,7 @@ public class User : BaseEntity
             Username = username,
             Email = email,
             PasswordHash = passwordHash,
-            Gold = 0
+            Gold = 1000 // Başlangıç gold'u
         };
     }
 

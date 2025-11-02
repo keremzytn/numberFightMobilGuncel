@@ -13,6 +13,11 @@ public class GameDto
     public string? WinnerId { get; set; }
     public List<GameMoveDto> Moves { get; set; } = new();
     public DateTime CreatedAt { get; set; }
+    public GameMode Mode { get; set; }
+    public int EntryFee { get; set; }
+    public int WinnerReward { get; set; }
+    public int LoserReward { get; set; }
+    public int DrawReward { get; set; }
 }
 
 public class GameMoveDto

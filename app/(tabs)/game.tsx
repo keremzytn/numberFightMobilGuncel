@@ -11,6 +11,7 @@ import CardComponent from '@/components/CardComponent';
 import GameHeader from '@/components/GameHeader';
 import RoundResult from '@/components/RoundResult';
 import { useAuth } from '../../context/auth';
+import { authService } from '@/src/services/authService';
 
 interface ErrorType {
   type: 'connection' | 'game';
@@ -29,7 +30,7 @@ interface ReconnectAttempt {
 export default function GameScreen() {
   // Router ve Auth hooks
   const params = useLocalSearchParams<{ mode: string }>();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const requestedMode = (params?.mode || 'bot') as 'bot' | 'online';
   // Çevrimiçi mod için giriş kontrolü
   const mode = (!user && requestedMode === 'online') ? 'bot' : requestedMode;
@@ -328,14 +329,18 @@ export default function GameScreen() {
 
       socketService.off('gameEnd');
       socketService.on('gameEnd', (result: GameEndResult) => {
-        console.log('🏆 Oyun bitti - Kazanan:', result.isWinner ? 'Sen' : 'Rakip');
+        console.log('🏆 gameEnd event alındı:', JSON.stringify(result));
+        console.log('isWinner:', result.isWinner, 'winner:', result.winner);
         showOnlineGameEndDialog(result);
       });
 
       socketService.off('error');
       socketService.on('error', (error: string) => {
         console.error('Oyun hatası:', error);
-        Alert.alert('Hata', error);
+        Alert.alert('Hata', error, [
+          { text: 'Tamam', onPress: () => router.push('/') }
+        ]);
+        cleanup();
       });
 
       socketService.off('opponentLeft');
@@ -395,20 +400,41 @@ export default function GameScreen() {
     }
   };
 
-  const showGameEndDialog = () => {
+  const refreshUserGold = async () => {
+    if (!user) return;
+    try {
+      const token = await authService.getToken();
+      const response = await fetch(`${API_URL}/api/Users/${user.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const userData = await response.json();
+        await updateUser({ gold: userData.gold });
+      }
+    } catch (error) {
+      console.error('Gold güncellenirken hata:', error);
+    }
+  };
+
+  const showGameEndDialog = async () => {
     const state = gameEngine.getGameState();
     let message = '';
+    let goldReward = 0;
+
     if (state.player1Score > state.player2Score) {
       message = 'Tebrikler! Oyunu kazandınız! 🏆';
+      goldReward = 10;
     } else if (state.player1Score < state.player2Score) {
       message = 'Kaybettiniz! Tekrar deneyin. 😞';
+      goldReward = 2;
     } else {
       message = 'Berabere! İyi oyun! 🤝';
+      goldReward = 5;
     }
 
     // Maç sonucunu backend'e kaydet (sadece giriş yapmış kullanıcılar için)
     if (user) {
-      fetch(`${API_URL}/api/Matches`, {
+      await fetch(`${API_URL}/api/Matches`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -421,9 +447,13 @@ export default function GameScreen() {
           mode: 'bot',
         })
       });
+
+      // Gold'u güncelle
+      await refreshUserGold();
+
       Alert.alert(
         'Oyun Bitti',
-        message,
+        message + `\n\n💰 +${goldReward} Gold kazandınız!`,
         [
           { text: 'Ana Menü', onPress: () => router.push('/') },
           { text: 'Tekrar Oyna', onPress: resetGame }
@@ -442,8 +472,10 @@ export default function GameScreen() {
     }
   };
 
-  const showOnlineGameEndDialog = (result: GameEndResult) => {
+  const showOnlineGameEndDialog = async (result: GameEndResult) => {
+    console.log('showOnlineGameEndDialog çağrıldı:', result);
     let message = '';
+
     if (result.isWinner) {
       message = 'Tebrikler! Oyunu kazandınız! 🏆';
     } else if (result.winner) {
@@ -452,26 +484,12 @@ export default function GameScreen() {
       message = 'Berabere! İyi oyun! 🤝';
     }
 
-    // Maç sonucunu backend'e kaydet
-    if (user && onlineGameState) {
-      fetch(`${API_URL}/api/matches`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          player1Id: user.id,
-          player2Id: onlineGameState.opponentId || 'unknown',
-          player1Score: onlineGameState.player1Score,
-          player2Score: onlineGameState.player2Score,
-          winner: result.isWinner ? user.id : (result.winner ? onlineGameState.opponentId : null),
-          createdAt: new Date().toISOString(),
-          mode: 'online',
-        })
-      }).catch(err => console.error('Match kaydetme hatası:', err));
-    }
+    // Gold'u güncelle (ödül backend'de verildi)
+    await refreshUserGold();
 
     Alert.alert(
       'Oyun Bitti',
-      message,
+      message + '\n\nSkor: ' + result.player1Score + ' - ' + result.player2Score,
       [
         {
           text: 'Ana Menü',

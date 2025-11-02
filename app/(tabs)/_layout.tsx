@@ -1,5 +1,5 @@
 import { Redirect, Tabs } from 'expo-router';
-import { Chrome as Home, Gamepad2, Trophy, Settings, User, Users } from 'lucide-react-native';
+import { Chrome as Home, Trophy, Settings, User, Users } from 'lucide-react-native';
 import { useAuth } from '../../context/auth';
 import { Alert } from 'react-native';
 import { useEffect } from 'react';
@@ -41,10 +41,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="game"
         options={{
-          title: 'Oyun',
-          tabBarIcon: ({ size, color }) => (
-            <Gamepad2 size={size} color={color} />
-          ),
+          href: null, // Tab bar'dan gizle
         }}
       />
       <Tabs.Screen

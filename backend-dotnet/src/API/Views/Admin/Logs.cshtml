@@ -1,0 +1,476 @@
+@{
+    ViewData["Title"] = "Real-Time Logs";
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-terminal"></i> Real-Time Logs</h1>
+        <div class="btn-group">
+            <button type="button" class="btn btn-sm btn-primary" onclick="toggleAutoScroll()">
+                <i class="bi bi-arrow-down-circle"></i> <span id="autoScrollText">Otomatik Kaydırma: Açık</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-warning" onclick="clearLogs()">
+                <i class="bi bi-trash"></i> Logları Temizle
+            </button>
+            <button type="button" class="btn btn-sm btn-info" onclick="exportLogs()">
+                <i class="bi bi-download"></i> İndir
+            </button>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-activity"></i> Bağlantı Durumu:
+                        <span id="connectionStatus" class="badge bg-secondary">Bağlanıyor...</span>
+                    </div>
+                    <div>
+                        Toplam Log: <span id="logCount" class="badge bg-info">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="btn-group btn-group-sm" role="group">
+                <input type="checkbox" class="btn-check" id="filterInfo" autocomplete="off" checked
+                    onchange="applyFilters()">
+                <label class="btn btn-outline-info" for="filterInfo">
+                    <i class="bi bi-info-circle"></i> Info
+                </label>
+
+                <input type="checkbox" class="btn-check" id="filterWarning" autocomplete="off" checked
+                    onchange="applyFilters()">
+                <label class="btn btn-outline-warning" for="filterWarning">
+                    <i class="bi bi-exclamation-triangle"></i> Warning
+                </label>
+
+                <input type="checkbox" class="btn-check" id="filterError" autocomplete="off" checked
+                    onchange="applyFilters()">
+                <label class="btn btn-outline-danger" for="filterError">
+                    <i class="bi bi-x-circle"></i> Error
+                </label>
+
+                <input type="checkbox" class="btn-check" id="filterDebug" autocomplete="off" checked
+                    onchange="applyFilters()">
+                <label class="btn btn-outline-secondary" for="filterDebug">
+                    <i class="bi bi-bug"></i> Debug
+                </label>
+            </div>
+            <input type="text" class="form-control form-control-sm d-inline-block w-auto ms-3" id="searchBox"
+                placeholder="Ara..." onkeyup="applyFilters()">
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <label class="form-label small text-muted">Kategori Filtreleri:</label>
+            <div class="btn-group btn-group-sm flex-wrap" role="group">
+                <input type="checkbox" class="btn-check" id="filterDatabase" autocomplete="off"
+                    onchange="applyFilters()">
+                <label class="btn btn-outline-primary" for="filterDatabase">
+                    🗄️ Database <span class="badge bg-primary" id="countDatabase">0</span>
+                </label>
+
+                <input type="checkbox" class="btn-check" id="filterGame" autocomplete="off" onchange="applyFilters()">
+                <label class="btn btn-outline-success" for="filterGame">
+                    🎮 Game <span class="badge bg-success" id="countGame">0</span>
+                </label>
+
+                <input type="checkbox" class="btn-check" id="filterSignalR" autocomplete="off"
+                    onchange="applyFilters()">
+                <label class="btn btn-outline-info" for="filterSignalR">
+                    📡 SignalR <span class="badge bg-info" id="countSignalR">0</span>
+                </label>
+
+                <input type="checkbox" class="btn-check" id="filterAdmin" autocomplete="off" onchange="applyFilters()">
+                <label class="btn btn-outline-warning" for="filterAdmin">
+                    👤 Admin <span class="badge bg-warning" id="countAdmin">0</span>
+                </label>
+
+                <input type="checkbox" class="btn-check" id="filterAuth" autocomplete="off" onchange="applyFilters()">
+                <label class="btn btn-outline-danger" for="filterAuth">
+                    🔐 Auth <span class="badge bg-danger" id="countAuth">0</span>
+                </label>
+
+                <input type="checkbox" class="btn-check" id="filterGold" autocomplete="off" onchange="applyFilters()">
+                <label class="btn btn-outline-dark" for="filterGold">
+                    💰 Gold <span class="badge bg-dark" id="countGold">0</span>
+                </label>
+
+                <input type="checkbox" class="btn-check" id="filterSystem" autocomplete="off" onchange="applyFilters()">
+                <label class="btn btn-outline-secondary" for="filterSystem">
+                    ⚙️ System <span class="badge bg-secondary" id="countSystem">0</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card bg-dark text-white" style="height: 70vh;">
+                <div class="card-body p-0">
+                    <div id="logContainer" class="p-3 overflow-auto"
+                        style="height: 100%; font-family: 'Courier New', monospace; font-size: 13px;">
+                        <div class="text-muted">Loglar bekleniyor...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #logContainer {
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+    }
+
+    .log-entry {
+        padding: 4px 8px;
+        margin-bottom: 2px;
+        border-left: 3px solid transparent;
+        word-wrap: break-word;
+    }
+
+    .log-entry:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .log-info {
+        border-left-color: #17a2b8;
+        color: #17a2b8;
+    }
+
+    .log-warning {
+        border-left-color: #ffc107;
+        color: #ffc107;
+    }
+
+    .log-error {
+        border-left-color: #dc3545;
+        color: #dc3545;
+    }
+
+    .log-debug {
+        border-left-color: #6c757d;
+        color: #6c757d;
+    }
+
+    .log-timestamp {
+        color: #6c757d;
+        font-size: 11px;
+        margin-right: 10px;
+    }
+
+    .log-level {
+        font-weight: bold;
+        margin-right: 10px;
+        min-width: 60px;
+        display: inline-block;
+    }
+
+    .log-category {
+        margin-right: 8px;
+        font-size: 14px;
+        cursor: help;
+    }
+
+    .log-message {
+        color: #d4d4d4;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        let autoScroll = true;
+        let logs = [];
+        let filteredLogs = [];
+
+        // SignalR Connection
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/adminHub")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.start()
+            .then(() => {
+                console.log("✅ AdminHub'a bağlanıldı");
+                updateConnectionStatus("Bağlı - Loglar yükleniyor...", "success");
+
+                // 2 saniye sonra status'u güncelle (buffered loglar gelmiş olmalı)
+                setTimeout(() => {
+                    updateConnectionStatus("Bağlı", "success");
+                }, 2000);
+            })
+            .catch(err => {
+                console.error("❌ AdminHub bağlantı hatası:", err);
+                updateConnectionStatus("Bağlantı Hatası", "danger");
+            });
+
+        connection.onreconnecting(() => {
+            updateConnectionStatus("Yeniden bağlanıyor...", "warning");
+        });
+
+        connection.onreconnected(() => {
+            updateConnectionStatus("Bağlı", "success");
+        });
+
+        connection.onclose(() => {
+            updateConnectionStatus("Bağlantı Kesildi", "danger");
+        });
+
+        // Log alma
+        connection.on("ReceiveLog", (log) => {
+            addLog(log);
+        });
+
+        function updateConnectionStatus(text, type) {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.textContent = text;
+            statusEl.className = `badge bg-${type}`;
+        }
+
+        function categorizeLog(message) {
+            // Database sorguları
+            if (message.includes('Executed DbCommand') || message.includes('SELECT') ||
+                message.includes('INSERT') || message.includes('UPDATE') || message.includes('DELETE')) {
+                return 'database';
+            }
+
+            // Oyun logları
+            if (message.includes('🎮') || message.includes('🏁') || message.includes('Match found') ||
+                message.includes('PlayCard') || message.includes('Round resolved') ||
+                message.includes('Game ended') || message.includes('gameEnd') ||
+                message.includes('Bot game started') || message.includes('🤖')) {
+                return 'game';
+            }
+
+            // SignalR bağlantı logları
+            if (message.includes('SignalR') || message.includes('Hub') ||
+                message.includes('connected') || message.includes('disconnected') ||
+                message.includes('Connection')) {
+                return 'signalr';
+            }
+
+            // Admin logları
+            if (message.includes('Admin') || message.includes('Stats sent') ||
+                message.includes('👤') || message.includes('📊')) {
+                return 'admin';
+            }
+
+            // Auth logları
+            if (message.includes('JWT') || message.includes('Token') ||
+                message.includes('Login') || message.includes('Register') ||
+                message.includes('Auth') || message.includes('🔐')) {
+                return 'auth';
+            }
+
+            // Gold işlemleri
+            if (message.includes('Gold') || message.includes('💰') ||
+                message.includes('Entry fee') || message.includes('Reward')) {
+                return 'gold';
+            }
+
+            // System logları
+            if (message.includes('Startup') || message.includes('Shutdown') ||
+                message.includes('Application') || message.includes('⚙️') ||
+                message.includes('Background') || message.includes('Service')) {
+                return 'system';
+            }
+
+            return 'other';
+        }
+
+        const categoryCounts = {
+            database: 0,
+            game: 0,
+            signalr: 0,
+            admin: 0,
+            auth: 0,
+            gold: 0,
+            system: 0,
+            other: 0
+        };
+
+        function addLog(log) {
+            const timestamp = new Date().toLocaleTimeString('tr-TR', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                fractionalSecondDigits: 3
+            });
+
+            const category = categorizeLog(log.message);
+            categoryCounts[category]++;
+            updateCategoryCounts();
+
+            const logEntry = {
+                timestamp: timestamp,
+                level: log.level || 'Info',
+                message: log.message,
+                details: log.details || null,
+                category: category
+            };
+
+            logs.push(logEntry);
+
+            // Max 1000 log tut
+            if (logs.length > 1000) {
+                logs.shift();
+            }
+
+            applyFilters();
+        }
+
+        function updateCategoryCounts() {
+            // Kategori sayaçlarını güncelle
+            document.getElementById('countDatabase').textContent = categoryCounts.database;
+            document.getElementById('countGame').textContent = categoryCounts.game;
+            document.getElementById('countSignalR').textContent = categoryCounts.signalr;
+            document.getElementById('countAdmin').textContent = categoryCounts.admin;
+            document.getElementById('countAuth').textContent = categoryCounts.auth;
+            document.getElementById('countGold').textContent = categoryCounts.gold;
+            document.getElementById('countSystem').textContent = categoryCounts.system;
+        }
+
+        function applyFilters() {
+            const showInfo = document.getElementById('filterInfo').checked;
+            const showWarning = document.getElementById('filterWarning').checked;
+            const showError = document.getElementById('filterError').checked;
+            const showDebug = document.getElementById('filterDebug').checked;
+            const searchText = document.getElementById('searchBox').value.toLowerCase();
+
+            // Kategori filtreleri - eğer hiçbiri seçili değilse hepsini göster
+            const categoryFilters = {
+                database: document.getElementById('filterDatabase').checked,
+                game: document.getElementById('filterGame').checked,
+                signalr: document.getElementById('filterSignalR').checked,
+                admin: document.getElementById('filterAdmin').checked,
+                auth: document.getElementById('filterAuth').checked,
+                gold: document.getElementById('filterGold').checked,
+                system: document.getElementById('filterSystem').checked
+            };
+
+            const anyCategorySelected = Object.values(categoryFilters).some(v => v);
+
+            filteredLogs = logs.filter(log => {
+                // Level filter
+                if (log.level === 'Info' && !showInfo) return false;
+                if (log.level === 'Warning' && !showWarning) return false;
+                if (log.level === 'Error' && !showError) return false;
+                if (log.level === 'Debug' && !showDebug) return false;
+
+                // Category filter - eğer herhangi bir kategori seçiliyse, sadece seçili kategorileri göster
+                if (anyCategorySelected && log.category !== 'other' && !categoryFilters[log.category]) {
+                    return false;
+                }
+
+                // Search filter
+                if (searchText && !log.message.toLowerCase().includes(searchText)) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            renderLogs();
+        }
+
+        function renderLogs() {
+            const container = document.getElementById('logContainer');
+
+            if (filteredLogs.length === 0) {
+                container.innerHTML = '<div class="text-muted">Gösterilecek log yok...</div>';
+                document.getElementById('logCount').textContent = '0';
+                return;
+            }
+
+            let html = '';
+            filteredLogs.forEach(log => {
+                const levelClass = `log-${log.level.toLowerCase()}`;
+                const detailsHtml = log.details ? `<br><span class="text-muted ms-5">${JSON.stringify(log.details)}</span>` : '';
+
+                // Kategori ikonu
+                const categoryIcons = {
+                    database: '🗄️',
+                    game: '🎮',
+                    signalr: '📡',
+                    admin: '👤',
+                    auth: '🔐',
+                    gold: '💰',
+                    system: '⚙️',
+                    other: '📝'
+                };
+                const categoryIcon = categoryIcons[log.category] || '📝';
+
+                html += `
+                                                    <div class="log-entry ${levelClass}">
+                                                        <span class="log-timestamp">${log.timestamp}</span>
+                                                        <span class="log-level">[${log.level.toUpperCase()}]</span>
+                                                        <span class="log-category" title="${log.category}">${categoryIcon}</span>
+                                                        <span class="log-message">${escapeHtml(log.message)}</span>
+                                                        ${detailsHtml}
+                                                    </div>
+                                                `;
+            });
+
+            container.innerHTML = html;
+            document.getElementById('logCount').textContent = logs.length;
+
+            if (autoScroll) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            const text = autoScroll ? 'Açık' : 'Kapalı';
+            document.getElementById('autoScrollText').textContent = `Otomatik Kaydırma: ${text}`;
+        }
+
+        function clearLogs() {
+            if (confirm('Tüm logları temizlemek istediğinize emin misiniz?')) {
+                logs = [];
+                filteredLogs = [];
+                // Kategori sayaçlarını sıfırla
+                Object.keys(categoryCounts).forEach(key => categoryCounts[key] = 0);
+                updateCategoryCounts();
+                renderLogs();
+            }
+        }
+
+        function exportLogs() {
+            const text = logs.map(log =>
+                `${log.timestamp} [${log.level}] [${log.category.toUpperCase()}] ${log.message}`
+            ).join('\n');
+
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `logs-${new Date().toISOString()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Sayfa kapatılırken bağlantıyı kapat
+        window.addEventListener('beforeunload', () => {
+            connection.stop();
+        });
+    </script>
+}
+

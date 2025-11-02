@@ -172,6 +172,12 @@
                                 <i class="bi bi-activity"></i> API İzleme
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Logs" ? "active" : "")"
+                                asp-controller="Admin" asp-action="Logs">
+                                <i class="bi bi-terminal"></i> Real-Time Logs
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </nav>

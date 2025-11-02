@@ -367,6 +367,12 @@ public class AdminController : Controller
         return View(game);
     }
 
+    [AdminAuthorize]
+    public IActionResult Logs()
+    {
+        return View();
+    }
+
     // User Management Actions
     [HttpPost]
     [AdminAuthorize]

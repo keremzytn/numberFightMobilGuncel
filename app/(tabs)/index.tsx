@@ -1,14 +1,38 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Bot, Users, Play, LogIn, UserPlus, Gamepad2, Trophy } from 'lucide-react-native';
 import { useAuth } from '../../context/auth';
 import { Link } from 'expo-router';
 import FriendNotifications from '../../components/FriendNotifications';
+import { authService } from '@/src/services/authService';
+import { API_URL } from '@/src/config/env';
 
 export default function HomeScreen() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
+
+  // Sayfa her açıldığında gold'u güncelle
+  useFocusEffect(
+    React.useCallback(() => {
+      const refreshGold = async () => {
+        if (!user) return;
+        try {
+          const token = await authService.getToken();
+          const response = await fetch(`${API_URL}/api/Users/${user.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const userData = await response.json();
+            await updateUser({ gold: userData.gold });
+          }
+        } catch (error) {
+          console.error('Gold güncellenirken hata:', error);
+        }
+      };
+      refreshGold();
+    }, [user?.id])
+  );
 
   const startBotGame = () => {
     router.push({
@@ -18,6 +42,15 @@ export default function HomeScreen() {
   };
 
   const startOnlineGame = () => {
+    if (!user) {
+      Alert.alert(
+        'Giriş Gerekli',
+        'Çevrimiçi oynamak için giriş yapmanız gerekiyor.',
+        [{ text: 'Tamam' }]
+      );
+      return;
+    }
+
     router.push({
       pathname: '/game',
       params: { mode: 'online' }
@@ -81,6 +114,11 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Kart Savaşı</Text>
         <Text style={styles.subtitle}>Stratejik 7 Raund Mücadelesi</Text>
+        {user && (
+          <View style={styles.goldDisplay}>
+            <Text style={styles.goldText}>💰 {user.gold} Gold</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.buttonContainer}>
@@ -94,6 +132,7 @@ export default function HomeScreen() {
             <Bot size={36} color="#ffffff" />
             <Text style={styles.buttonText}>Bilgisayara Karşı</Text>
             <Text style={styles.buttonSubtext}>Yapay zeka ile oyna</Text>
+            <Text style={styles.entryFee}>🎫 10 Gold</Text>
           </LinearGradient>
         </TouchableOpacity>
 
@@ -107,6 +146,7 @@ export default function HomeScreen() {
             <Users size={36} color="#ffffff" />
             <Text style={styles.buttonText}>Çevrimiçi Oyun</Text>
             <Text style={styles.buttonSubtext}>Gerçek oyuncularla eşleş</Text>
+            <Text style={styles.entryFee}>🎫 25 Gold</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -232,5 +272,25 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#94a3b8',
     fontWeight: '500',
+  },
+  goldDisplay: {
+    backgroundColor: 'rgba(251, 191, 36, 0.2)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 16,
+    borderWidth: 2,
+    borderColor: '#fbbf24',
+  },
+  goldText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fbbf24',
+  },
+  entryFee: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 4,
+    fontWeight: '600',
   },
 });

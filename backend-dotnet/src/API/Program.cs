@@ -101,6 +101,13 @@ builder.Services.AddSignalR();
 builder.Services.AddHostedService<GameTimeoutService>();
 builder.Services.AddHostedService<AdminStatsBackgroundService>();
 
+// Add Custom Logger Provider for Admin Panel
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+builder.Logging.SetMinimumLevel(LogLevel.Debug); // Debug loglarını da göster
+// Admin logger provider'ı app build edildikten sonra ekleyeceğiz
+
 // Add CORS
 builder.Services.AddCors(options =>
 {
@@ -114,6 +121,10 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Add Admin Logger Provider (app build edildikten sonra)
+var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+loggerFactory.AddProvider(new AdminLoggerProvider(app.Services));
 
 // 🧹 Startup'ta tüm aktif oyunları temizle
 using (var scope = app.Services.CreateScope())

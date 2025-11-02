@@ -8,21 +8,34 @@ public class AdminHub : Hub
     private readonly IUserRepository _userRepository;
     private readonly IGameRepository _gameRepository;
     private readonly ILogger<AdminHub> _logger;
+    private readonly IHubContext<AdminHub> _hubContext;
 
     public AdminHub(
         IUserRepository userRepository,
         IGameRepository gameRepository,
-        ILogger<AdminHub> logger)
+        ILogger<AdminHub> logger,
+        IHubContext<AdminHub> hubContext)
     {
         _userRepository = userRepository;
         _gameRepository = gameRepository;
         _logger = logger;
+        _hubContext = hubContext;
     }
 
     public override async Task OnConnectedAsync()
     {
         _logger.LogInformation($"Admin connected: {Context.ConnectionId}");
         await base.OnConnectedAsync();
+
+        // Buffer'daki tüm logları bu connection'a gönder
+        try
+        {
+            await API.Services.AdminLoggerProvider.SendBufferedLogs(_hubContext, Context.ConnectionId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning($"Buffer logları gönderilirken hata: {ex.Message}");
+        }
 
         // İlk bağlantıda güncel istatistikleri gönder
         await SendStats();
@@ -92,6 +105,25 @@ public class AdminHub : Hub
     public async Task RequestStatsUpdate()
     {
         await SendStats();
+    }
+
+    // Tüm admin clientlara log gönder
+    public static async Task BroadcastLog(IHubContext<AdminHub> hubContext, string message, string level = "Info", object? details = null)
+    {
+        try
+        {
+            await hubContext.Clients.All.SendAsync("ReceiveLog", new
+            {
+                message = message,
+                level = level,
+                details = details,
+                timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception)
+        {
+            // Log gönderme hatası - sessizce yok say
+        }
     }
 }
 

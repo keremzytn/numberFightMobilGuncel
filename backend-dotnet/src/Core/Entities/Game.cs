@@ -11,6 +11,13 @@ public class Game : BaseEntity
     public GameStatus Status { get; private set; }
     public string? WinnerId { get; private set; }
     public int CurrentRound { get; private set; }
+    public GameMode Mode { get; private set; }
+    public int EntryFee { get; private set; }
+    public bool Player1Paid { get; private set; }
+    public bool Player2Paid { get; private set; }
+    public int WinnerReward { get; private set; }
+    public int LoserReward { get; private set; }
+    public int DrawReward { get; private set; }
     public List<int> Player1UsedCards { get; private set; } = new();
     public List<int> Player2UsedCards { get; private set; } = new();
     public List<int> Player1ForbiddenCards { get; private set; } = new();
@@ -22,8 +29,13 @@ public class Game : BaseEntity
 
     private Game() { } // EF Core için
 
-    public static Game Create(string player1Id, string player2Id)
+    public static Game Create(string player1Id, string player2Id, GameMode mode = GameMode.Online)
     {
+        var entryFee = mode == GameMode.Online ? 25 : 10; // Online: 25 gold, Bot: 10 gold
+        var winReward = mode == GameMode.Online ? 50 : 10;
+        var drawReward = mode == GameMode.Online ? 20 : 5;
+        var loseReward = mode == GameMode.Online ? 5 : 2;
+        
         return new Game
         {
             Player1Id = player1Id,
@@ -31,8 +43,63 @@ public class Game : BaseEntity
             Player1Score = 0,
             Player2Score = 0,
             Status = GameStatus.Waiting,
-            CurrentRound = 1
+            CurrentRound = 1,
+            Mode = mode,
+            EntryFee = entryFee,
+            Player1Paid = false,
+            Player2Paid = false,
+            WinnerReward = winReward,
+            LoserReward = loseReward,
+            DrawReward = drawReward
         };
+    }
+
+    public void MarkPlayerPaid(string playerId)
+    {
+        if (playerId == Player1Id)
+            Player1Paid = true;
+        else if (playerId == Player2Id)
+            Player2Paid = true;
+    }
+
+    public bool CanStart()
+    {
+        // Bot maçlarında sadece Player1'in ödemesi gerekir
+        if (Mode == GameMode.Bot)
+            return Player1Paid;
+        
+        // Online maçlarda her iki oyuncunun da ödemesi gerekir
+        return Player1Paid && Player2Paid;
+    }
+
+    public int CalculateReward(string playerId)
+    {
+        if (WinnerId == playerId)
+        {
+            // Kazanç bonusları kontrol et
+            int bonus = 0;
+            if (Mode == GameMode.Online)
+            {
+                var score = playerId == Player1Id ? Player1Score : Player2Score;
+                var opponentScore = playerId == Player1Id ? Player2Score : Player1Score;
+                
+                // Perfect Game: 7-0
+                if (score == 7 && opponentScore == 0)
+                    bonus += 50;
+                // Close Win: 4-3
+                else if (score == 4 && opponentScore == 3)
+                    bonus += 10;
+            }
+            return WinnerReward + bonus;
+        }
+        else if (WinnerId == null) // Beraberlik
+        {
+            return DrawReward;
+        }
+        else // Kaybetme
+        {
+            return LoserReward;
+        }
     }
 
     public List<int> GetValidCards(string playerId)
