@@ -4,6 +4,7 @@ using MediatR;
 using Application.DTOs;
 using Application.Features.Friends.Commands.SendFriendRequest;
 using Application.Features.Friends.Commands.RespondToFriendRequest;
+using Application.Features.Friends.Commands.DeleteFriendship;
 using Application.Features.Friends.Queries.GetFriends;
 using Application.Features.Friends.Queries.SearchUsers;
 using Core.Entities;
@@ -146,6 +147,25 @@ public class FriendsController : ControllerBase
             var userId = GetCurrentUserId();
             var users = await _mediator.Send(new SearchUsersQuery(searchTerm, userId));
             return Ok(users);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpDelete("{friendUserId}")]
+    public async Task<ActionResult> DeleteFriendship(string friendUserId)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var result = await _mediator.Send(new DeleteFriendshipCommand(userId, friendUserId));
+            return Ok(new { success = result, message = "Arkadaşlık ilişkisi silindi" });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
         }
         catch (Exception ex)
         {

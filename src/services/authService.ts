@@ -36,6 +36,8 @@ export interface AuthResponse {
         id: string;
         username: string;
         email: string;
+        gold: number;
+        createdAt: string;
     };
 }
 

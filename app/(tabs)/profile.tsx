@@ -1,9 +1,42 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../context/auth';
 import { router } from 'expo-router';
+import { useState, useEffect } from 'react';
+import { API_URL } from '../../src/config/env';
 
 export default function ProfileScreen() {
-    const { user, logout } = useAuth();
+    const { user, logout, updateUser, token } = useAuth();
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        // Backend'den güncel kullanıcı bilgilerini çek
+        const fetchUserProfile = async () => {
+            if (!user?.id || !token) return;
+
+            setLoading(true);
+            try {
+                const response = await fetch(`${API_URL}/api/Users/${user.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                if (response.ok) {
+                    const userData = await response.json();
+                    await updateUser({
+                        gold: userData.gold,
+                        createdAt: userData.createdAt,
+                    });
+                }
+            } catch (error) {
+                console.error('Profil bilgileri yüklenirken hata:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUserProfile();
+    }, [user?.id]);
 
     const handleLogout = async () => {
         await logout();
@@ -12,8 +45,18 @@ export default function ProfileScreen() {
 
     // Avatar için baş harf
     const avatarLetter = user?.username ? user.username.charAt(0).toUpperCase() : '?';
-    // Kayıt tarihi örnek (user'dan değil, sabit)
-    const createdAt = '2024-01-01';
+
+    // Kayıt tarihini formatla
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('tr-TR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    };
+
+    const createdAt = user?.createdAt ? formatDate(user.createdAt) : 'Bilinmiyor';
 
     return (
         <View style={styles.container}>
@@ -23,6 +66,9 @@ export default function ProfileScreen() {
                     <Text style={styles.avatarText}>{avatarLetter}</Text>
                 </View>
                 <Text style={styles.title}>Profil Bilgileri</Text>
+                {loading && (
+                    <ActivityIndicator size="small" color="#f59e0b" style={{ marginBottom: 10 }} />
+                )}
                 <View style={styles.infoContainer}>
                     <Text style={styles.label}>Kullanıcı Adı:</Text>
                     <Text style={styles.value}>{user?.username}</Text>
@@ -30,6 +76,10 @@ export default function ProfileScreen() {
                 <View style={styles.infoContainer}>
                     <Text style={styles.label}>E-posta:</Text>
                     <Text style={styles.value}>{user?.email}</Text>
+                </View>
+                <View style={styles.infoContainer}>
+                    <Text style={styles.label}>Gold:</Text>
+                    <Text style={styles.goldValue}>💰 {user?.gold || 0}</Text>
                 </View>
                 <View style={styles.infoContainer}>
                     <Text style={styles.label}>Kayıt Tarihi:</Text>
@@ -108,6 +158,11 @@ const styles = StyleSheet.create({
     avatarText: {
         color: '#f59e0b',
         fontSize: 36,
+        fontWeight: 'bold',
+    },
+    goldValue: {
+        fontSize: 20,
+        color: '#fbbf24',
         fontWeight: 'bold',
     },
 }); 

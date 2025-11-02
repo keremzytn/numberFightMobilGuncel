@@ -7,7 +7,7 @@ import { socketService } from '../../src/services/socketService';
 import { API_URL } from '../../src/config/env';
 
 export default function HistoryScreen() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const userId = user?.id;
   const [stats, setStats] = useState({
     totalGames: 0,
@@ -18,33 +18,90 @@ export default function HistoryScreen() {
     bestStreak: 0,
   });
   const [recentGames, setRecentGames] = useState<any[]>([]);
+  const [opponentNames, setOpponentNames] = useState<{ [key: string]: string }>({});
 
   const fetchGames = async () => {
+    if (!userId || !token) return;
+
     try {
-      const res = await fetch(`${API_URL}/api/Matches/user/${userId}`);
-      const data = await res.json();
-      if (data.success) {
-        const games = data.matches;
-        updateStats(games);
+      const res = await fetch(`${API_URL}/api/Matches/user/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // Response kontrolü
+      if (!res.ok) {
+        console.log('Matches API yanıt hatası:', res.status);
+        return;
+      }
+
+      // Response body boş mu kontrol et
+      const text = await res.text();
+      if (!text) {
+        console.log('Matches API boş yanıt döndü - henüz maç oynanmamış');
+        return;
+      }
+
+      // JSON parse et
+      const data = JSON.parse(text);
+
+      // Backend direkt array döndürüyor
+      if (Array.isArray(data)) {
+        updateStats(data);
       }
     } catch (error) {
       console.error('Error fetching games:', error);
     }
   };
 
+  const fetchOpponentName = async (opponentId: string) => {
+    if (opponentNames[opponentId]) return;
+
+    try {
+      const res = await fetch(`${API_URL}/api/Users/${opponentId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        const userData = await res.json();
+        setOpponentNames(prev => ({ ...prev, [opponentId]: userData.username }));
+      }
+    } catch (error) {
+      console.error('Rakip adı alınırken hata:', error);
+    }
+  };
+
   const updateStats = (games: any[]) => {
-    setRecentGames(games.slice(-5).reverse().map((game: any, i: number) => ({
-      id: game._id || i,
-      opponent: game.player1Id === userId ? game.player2Id : game.player1Id,
-      result: game.winner === userId ? 'win' : (game.winner ? 'loss' : 'draw'),
-      score: `${game.player1Score}-${game.player2Score}`,
-      date: game.createdAt ? game.createdAt.substring(0, 10) : '',
-    })));
+    if (!games || games.length === 0) {
+      return;
+    }
+
+    const recentGamesList = games.slice(-5).reverse().map((game: any, i: number) => {
+      const opponentId = game.player1Id === userId ? game.player2Id : game.player1Id;
+
+      // Rakip adını fetch et
+      fetchOpponentName(opponentId);
+
+      return {
+        id: game.id || i,
+        opponentId,
+        opponent: opponentNames[opponentId] || opponentId,
+        result: game.winnerId === userId ? 'win' : (game.winnerId ? 'loss' : 'draw'),
+        score: `${game.player1Score}-${game.player2Score}`,
+        date: game.createdAt ? new Date(game.createdAt).toLocaleDateString('tr-TR') : '',
+      };
+    });
+
+    setRecentGames(recentGamesList);
 
     let wins = 0, losses = 0, draws = 0;
     games.forEach((g: any) => {
-      if (g.winner === userId) wins++;
-      else if (!g.winner) draws++;
+      if (g.winnerId === userId) wins++;
+      else if (!g.winnerId) draws++;
       else losses++;
     });
 
@@ -59,7 +116,7 @@ export default function HistoryScreen() {
   };
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !token) return;
 
     fetchGames();
 
@@ -81,7 +138,17 @@ export default function HistoryScreen() {
     return () => {
       socketService.disconnect();
     };
-  }, [userId]);
+  }, [userId, token]);
+
+  // Rakip isimleri güncellendiğinde oyunları yeniden render et
+  useEffect(() => {
+    if (recentGames.length > 0 && Object.keys(opponentNames).length > 0) {
+      setRecentGames(prev => prev.map(game => ({
+        ...game,
+        opponent: opponentNames[game.opponentId] || game.opponent
+      })));
+    }
+  }, [opponentNames]);
 
   if (!user) {
     return (
@@ -160,20 +227,24 @@ export default function HistoryScreen() {
         <View style={styles.recentGamesSection}>
           <Text style={styles.sectionTitle}>Son Oyunlar</Text>
 
-          {recentGames.map((game) => (
-            <View key={game.id} style={styles.gameItem}>
-              <View style={styles.gameInfo}>
-                <Text style={styles.gameOpponent}>vs {game.opponent}</Text>
-                <Text style={styles.gameDate}>{game.date}</Text>
+          {recentGames.length > 0 ? (
+            recentGames.map((game) => (
+              <View key={game.id} style={styles.gameItem}>
+                <View style={styles.gameInfo}>
+                  <Text style={styles.gameOpponent}>vs {opponentNames[game.opponentId] || game.opponent}</Text>
+                  <Text style={styles.gameDate}>{game.date}</Text>
+                </View>
+                <View style={styles.gameResult}>
+                  <Text style={styles.gameScore}>{game.score}</Text>
+                  <Text style={[styles.gameStatus, { color: getResultColor(game.result) }]}>
+                    {getResultText(game.result)}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.gameResult}>
-                <Text style={styles.gameScore}>{game.score}</Text>
-                <Text style={[styles.gameStatus, { color: getResultColor(game.result) }]}>
-                  {getResultText(game.result)}
-                </Text>
-              </View>
-            </View>
-          ))}
+            ))
+          ) : (
+            <Text style={styles.noGamesText}>Henüz oyun geçmişiniz yok</Text>
+          )}
         </View>
       </ScrollView>
     </LinearGradient>
@@ -290,5 +361,11 @@ const styles = StyleSheet.create({
   gameStatus: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  noGamesText: {
+    fontSize: 14,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginTop: 20,
   },
 });

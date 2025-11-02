@@ -54,10 +54,10 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Re
 
 class FriendService {
     async getFriends(status?: string): Promise<FriendDto[]> {
-        const url = status 
+        const url = status
             ? `${API_URL}/api/Friends?status=${encodeURIComponent(status)}`
             : `${API_URL}/api/Friends`;
-        
+
         const response = await fetchWithAuth(url);
         return response.json();
     }
@@ -96,6 +96,13 @@ class FriendService {
         const response = await fetchWithAuth(
             `${API_URL}/api/Friends/search?searchTerm=${encodeURIComponent(searchTerm)}`
         );
+        return response.json();
+    }
+
+    async deleteFriendship(friendUserId: string): Promise<{ success: boolean; message: string }> {
+        const response = await fetchWithAuth(`${API_URL}/api/Friends/${friendUserId}`, {
+            method: 'DELETE',
+        });
         return response.json();
     }
 }

@@ -3,9 +3,9 @@ import Constants from 'expo-constants';
 
 // Development (local) için IP adresi
 const DEV_API_HOST = Platform.select({
-    ios: '192.168.0.100',       // iOS Simulator veya gerçek iPhone için
-    android: '192.168.0.100',   // Android Emulator veya gerçek telefon için
-    default: '192.168.0.100'    // Gerçek cihaz için bilgisayarınızın IP'si
+    ios: '172.16.12.255',       // iOS Simulator veya gerçek iPhone için
+    android: '172.16.12.255',   // Android Emulator veya gerçek telefon için
+    default: '172.16.12.255'    // Gerçek cihaz için bilgisayarınızın IP'si
 });
 
 // Production için ngrok URL'i (EAS build'den gelir)

@@ -21,6 +21,8 @@ type User = {
     id: string;
     username: string;
     email: string;
+    gold: number;
+    createdAt: string;
 };
 
 type AuthContextType = {
@@ -30,6 +32,7 @@ type AuthContextType = {
     isLoading: boolean;
     token: string | null;
     refreshToken: () => Promise<void>;
+    updateUser: (updates: Partial<User>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,6 +93,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 id: response.user.id,
                 username: response.user.username,
                 email: response.user.email,
+                gold: response.user.gold,
+                createdAt: response.user.createdAt,
             };
 
             await AsyncStorage.setItem('user', JSON.stringify(userData));
@@ -125,6 +130,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const updateUser = async (updates: Partial<User>) => {
+        try {
+            if (!user) return;
+            const updatedUser = { ...user, ...updates };
+            await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+            setUser(updatedUser);
+        } catch (error) {
+            console.error('Kullanıcı güncellenirken hata:', error);
+            throw error;
+        }
+    };
+
     return (
         <AuthContext.Provider value={{
             user,
@@ -132,7 +149,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             logout,
             isLoading,
             token,
-            refreshToken
+            refreshToken,
+            updateUser
         }}>
             {children}
         </AuthContext.Provider>

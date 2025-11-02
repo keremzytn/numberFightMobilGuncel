@@ -9,6 +9,8 @@ import {
   Alert,
   RefreshControl,
   ActivityIndicator,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +18,7 @@ import { friendService, FriendDto, UserDto } from '../../src/services/friendServ
 import { socketService } from '../../src/services/socketService';
 import { useAuth } from '../../context/auth';
 import { LinearGradient } from 'expo-linear-gradient';
+import { API_URL } from '../../src/config/env';
 
 type TabType = 'friends' | 'pending' | 'search';
 
@@ -23,8 +26,17 @@ interface OnlineStatus {
   [userId: string]: boolean;
 }
 
+interface FriendProfile {
+  id: string;
+  username: string;
+  email: string;
+  gold: number;
+  createdAt: string;
+  isOnline?: boolean;
+}
+
 export default function FriendsScreen() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('friends');
   const [friends, setFriends] = useState<FriendDto[]>([]);
   const [pendingRequests, setPendingRequests] = useState<FriendDto[]>([]);
@@ -33,6 +45,8 @@ export default function FriendsScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [onlineStatus, setOnlineStatus] = useState<OnlineStatus>({});
+  const [selectedFriend, setSelectedFriend] = useState<FriendProfile | null>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const loadFriends = useCallback(async () => {
     try {
@@ -104,6 +118,62 @@ export default function FriendsScreen() {
     }
   };
 
+  const fetchFriendProfile = async (friendId: string) => {
+    if (!token) return;
+
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/api/Users/${friendId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedFriend(data);
+        setShowProfileModal(true);
+      } else {
+        Alert.alert('Hata', 'Profil bilgileri yüklenemedi');
+      }
+    } catch (error) {
+      console.error('Profil yükleme hatası:', error);
+      Alert.alert('Hata', 'Profil bilgileri yüklenemedi');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteFriendship = async (friendId: string) => {
+    Alert.alert(
+      'Arkadaşlığı Sil',
+      'Bu kullanıcıyla arkadaşlığınızı kesmek istediğinizden emin misiniz?',
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const result = await friendService.deleteFriendship(friendId);
+              if (result.success) {
+                Alert.alert('Başarılı', 'Arkadaşlık ilişkisi silindi');
+                setShowProfileModal(false);
+                setSelectedFriend(null);
+                await loadFriends();
+              } else {
+                Alert.alert('Hata', result.message || 'Arkadaşlık silinemedi');
+              }
+            } catch (error: any) {
+              console.error('Arkadaşlık silme hatası:', error);
+              Alert.alert('Hata', error.message || 'Arkadaşlık silinemedi');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -147,7 +217,11 @@ export default function FriendsScreen() {
     const isOnline = onlineStatus[friend.id] ?? friend.isOnline;
 
     return (
-      <View style={styles.friendItem}>
+      <TouchableOpacity
+        style={styles.friendItem}
+        onPress={() => fetchFriendProfile(friend.id)}
+        activeOpacity={0.7}
+      >
         <View style={styles.friendInfo}>
           <View style={styles.friendHeader}>
             <Text style={styles.friendName}>{friend.username}</Text>
@@ -158,12 +232,15 @@ export default function FriendsScreen() {
         {isOnline && (
           <TouchableOpacity
             style={styles.inviteButton}
-            onPress={() => inviteFriend(friend.id)}
+            onPress={(e) => {
+              e.stopPropagation();
+              inviteFriend(friend.id);
+            }}
           >
             <Text style={styles.inviteButtonText}>Davet Et</Text>
           </TouchableOpacity>
         )}
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -268,6 +345,15 @@ export default function FriendsScreen() {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('tr-TR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   return (
     <LinearGradient colors={['#0f172a', '#1e293b', '#334155']} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -319,6 +405,87 @@ export default function FriendsScreen() {
           {renderTabContent()}
         </View>
       </SafeAreaView>
+
+      {/* Profil Detay Modal */}
+      <Modal
+        visible={showProfileModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowProfileModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Profil Detayları</Text>
+                <TouchableOpacity
+                  onPress={() => setShowProfileModal(false)}
+                  style={styles.closeButton}
+                >
+                  <Ionicons name="close" size={24} color="#f8fafc" />
+                </TouchableOpacity>
+              </View>
+
+              {selectedFriend && (
+                <View style={styles.profileContent}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                      {selectedFriend.username.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+
+                  <View style={styles.profileInfo}>
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Kullanıcı Adı:</Text>
+                      <Text style={styles.infoValue}>{selectedFriend.username}</Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>E-posta:</Text>
+                      <Text style={styles.infoValue}>{selectedFriend.email}</Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Gold:</Text>
+                      <Text style={styles.goldValue}>💰 {selectedFriend.gold}</Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Kayıt Tarihi:</Text>
+                      <Text style={styles.infoValue}>
+                        {formatDate(selectedFriend.createdAt)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.modalActions}>
+                    {onlineStatus[selectedFriend.id] && (
+                      <TouchableOpacity
+                        style={[styles.modalButton, styles.inviteModalButton]}
+                        onPress={() => {
+                          inviteFriend(selectedFriend.id);
+                          setShowProfileModal(false);
+                        }}
+                      >
+                        <Ionicons name="game-controller" size={20} color="white" />
+                        <Text style={styles.modalButtonText}>Oyuna Davet Et</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity
+                      style={[styles.modalButton, styles.deleteModalButton]}
+                      onPress={() => deleteFriendship(selectedFriend.id)}
+                    >
+                      <Ionicons name="person-remove" size={20} color="white" />
+                      <Text style={styles.modalButtonText}>Arkadaşlıktan Çıkar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -508,5 +675,100 @@ const styles = StyleSheet.create({
     marginTop: 50,
     fontSize: 16,
     color: '#94a3b8',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1e293b',
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#f8fafc',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  profileContent: {
+    padding: 20,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  avatarText: {
+    color: '#f59e0b',
+    fontSize: 40,
+    fontWeight: 'bold',
+  },
+  profileInfo: {
+    gap: 16,
+    marginBottom: 24,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  infoLabel: {
+    fontSize: 15,
+    color: '#94a3b8',
+  },
+  infoValue: {
+    fontSize: 16,
+    color: '#f8fafc',
+    fontWeight: '600',
+  },
+  goldValue: {
+    fontSize: 18,
+    color: '#fbbf24',
+    fontWeight: 'bold',
+  },
+  modalActions: {
+    gap: 12,
+  },
+  modalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  inviteModalButton: {
+    backgroundColor: '#3b82f6',
+  },
+  deleteModalButton: {
+    backgroundColor: '#ef4444',
+  },
+  modalButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
