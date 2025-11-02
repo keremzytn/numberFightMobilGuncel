@@ -1,32 +1,37 @@
 {
-    "cli": {
-        "version": ">= 5.9.0"
+  "cli": {
+    "version": ">= 5.9.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      }
     },
-    "build": {
-        "development": {
-            "developmentClient": true,
-            "distribution": "internal",
-            "ios": {
-                "simulator": true
-            }
-        },
-        "preview": {
-            "distribution": "internal",
-            "android": {
-                "buildType": "apk"
-            },
-            "env": {
-                "API_URL": "https://submissively-preinductive-alta.ngrok-free.dev"
-            }
-        },
-        "production": {
-            "env": {
-                "API_URL": "https://submissively-preinductive-alta.ngrok-free.dev"
-            },
-            "autoIncrement": true
-        }
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "buildConfiguration": "Release",
+        "simulator": false
+      },
+      "env": {
+        "API_URL": "https://submissively-preinductive-alta.ngrok-free.dev"
+      }
     },
-    "submit": {
-        "production": {}
+    "production": {
+      "env": {
+        "API_URL": "https://submissively-preinductive-alta.ngrok-free.dev"
+      },
+      "autoIncrement": true
     }
+  },
+  "submit": {
+    "production": {}
+  }
 }

@@ -191,4 +191,7 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Admin}/{action=Dashboard}/{id?}"); // Admin panel default route
 
+// SPA fallback - React app için tüm diğer route'ları index.html'e yönlendir
+app.MapFallbackToFile("index.html");
+
 app.Run();

@@ -317,3 +317,8 @@
 /Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/obj/Debug/net9.0/API.RazorAssemblyInfo.cache
 /Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/obj/Debug/net9.0/API.RazorAssemblyInfo.cs
 /Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/bin/Debug/net9.0/appsettings.Production.json
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/bin/Debug/net9.0/API.staticwebassets.runtime.json
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/obj/Debug/net9.0/compressed/6x0scahnf1-ijipj39j26.gz
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/obj/Debug/net9.0/compressed/1dpm1p8bmc-1mfk2m13wh.gz
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/obj/Debug/net9.0/compressed/sx82n8of20-6cm1d3emsc.gz
+/Users/kerem/Documents/GitHub/numberFightMobilGuncel/backend-dotnet/src/API/obj/Debug/net9.0/compressed/p98161p1q9-vcliwg4k0r.gz
